@@ -20,7 +20,8 @@
 				"github.copilot-chat",
 				"ms-dotnettools.csdevkit",
 				"ms-azuretools.vscode-docker",
-				"github.vscode-pull-request-github"
+				"github.vscode-pull-request-github",
+				"ise-hve-essentials.hve-core-all"
 			],
 			"settings": {
 				"terminal.integrated.defaultProfile.linux": "bash"
