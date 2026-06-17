@@ -1,3 +1,8 @@
+---
+title: Dev Container Tooling Task Checklist
+description: Checklist for validating incremental Dev Container tooling changes.
+---
+
 ## Plan: Dev Container Tooling Task Checklist
 
 Archivo de tareas para implementar el tooling del Dev Container de a una herramienta por vez, validando cada incorporación antes de pasar a la siguiente. El objetivo es evitar cambios acoplados en /.devcontainer/post-create.sh y poder aislar errores de instalación, de configuración y de documentación.
@@ -25,15 +30,24 @@ Archivo de tareas para implementar el tooling del Dev Container de a una herrami
 - Con el estado actual del repo, el único punto parcialmente confirmado de forma global es el de archivos potencialmente afectados; los demás deben resolverse herramienta por herramienta antes de marcarse.
 
 **Task 1: `mattpocock/skills` para agentes instalados**
-- [ ] Verificar qué instala exactamente `npx skills@latest add mattpocock/skills` y en qué ubicación escribe.
-- [ ] Verificar si el comando es idempotente o si necesita guardas para no duplicar configuración al recrear el contenedor.
-- [ ] Determinar si el destino de instalación es de usuario o de workspace.
-- [ ] Si escribe fuera del repo, decidir si se acepta estado local o si hace falta una alternativa versionable.
-- [ ] Diseñar el paso exacto dentro de /.devcontainer/post-create.sh o documentar por qué no debe automatizarse ahí.
-- [ ] Definir el criterio de éxito: comando ejecutado sin error y skills visibles para los agentes instalados.
-- [ ] Agregar verificación explícita en la documentación del contenedor.
-- [ ] Probar una segunda ejecución para confirmar que no rompe el entorno.
-- [ ] No pasar a la siguiente herramienta hasta dejar resuelta la interacción con agents instalados.
+- [x] Verificar qué instala exactamente `npx skills@latest add mattpocock/skills` y en qué ubicación escribe.
+- [x] Verificar si el comando es idempotente o si necesita guardas para no duplicar configuración al recrear el contenedor.
+- [x] Determinar si el destino de instalación es de usuario o de workspace.
+- [x] Si escribe fuera del repo, decidir si se acepta estado local o si hace falta una alternativa versionable.
+- [x] Diseñar el paso exacto dentro de /.devcontainer/post-create.sh o documentar por qué no debe automatizarse ahí.
+- [x] Definir el criterio de éxito: comando ejecutado sin error y skills visibles para los agentes instalados.
+- [x] Agregar verificación explícita en la documentación del contenedor.
+- [x] Probar una segunda ejecución para confirmar que no rompe el entorno.
+- [x] No pasar a la siguiente herramienta hasta dejar resuelta la interacción con agents instalados.
+
+Resultado validado de Task 1:
+
+- La documentación oficial del CLI confirmó soporte de instalación global con `-g` / `--global`.
+- `skills add mattpocock/skills --global --yes` instala fuera del repo: escribe en `~/.agents/skills/**` y `~/.agents/.skill-lock.json`.
+- La segunda ejecución no creó rutas duplicadas, pero sí reescribió el árbol global completo y el lockfile global. O sea: es estable en layout y apta para bootstrap porque no ensucia el repo, aunque no evita rewrite de timestamps en el home del usuario.
+- Con la preferencia de este repo, la decisión final es instalar `skills` globalmente desde `/.devcontainer/post-create.sh` con versión pinneada del CLI y sin generar artifacts versionados dentro del workspace.
+- Criterio de éxito adoptado: el comando termina con exit code `0`, el instalador informa `Installing to: Codex, GitHub Copilot, OpenCode`, y `skills ls --global --json` lista los skills con `scope: global`.
+- La verificación explícita quedó documentada en `/.devcontainer/README.md`.
 
 **Task 2: `context-mode` CLI**
 - [ ] Identificar el paquete o binario oficial para Linux y su método de instalación reproducible.

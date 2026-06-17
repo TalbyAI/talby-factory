@@ -20,6 +20,24 @@ post-create bootstrap script.
 * GitHub Copilot CLI `1.0.63`
 * OpenCode CLI `1.17.7`
 * Codex CLI `0.140.0`
+* Skills CLI `1.5.11`
+
+## Global Agent Skills
+
+The Dev Container bootstraps `mattpocock/skills` globally for the `vscode`
+user instead of writing generated skill artifacts into the repository.
+
+The bootstrap installs the pinned `skills` CLI and then runs:
+
+```bash
+skills add mattpocock/skills --global --yes
+```
+
+This writes the installed skills to `~/.agents/skills/` and the global
+lockfile to `~/.agents/.skill-lock.json`.
+
+The command was validated to detect the installed agents non-interactively
+and install the skills for Codex, GitHub Copilot, and OpenCode.
 
 ## Files
 
@@ -45,7 +63,20 @@ aspire --version
 copilot --version
 opencode --version
 codex --version
+skills --version
 ```
+
+To verify the globally installed agent skills:
+
+```bash
+test -f ~/.agents/.skill-lock.json
+find ~/.agents/skills -maxdepth 2 -name SKILL.md | head
+skills ls --global --json
+```
+
+The install is considered successful when the command exits without error,
+prints `Installing to: Codex, GitHub Copilot, OpenCode`, and `skills ls
+--global --json` reports the installed skills with `scope: global`.
 
 ## Authentication Notes
 

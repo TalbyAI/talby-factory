@@ -11,6 +11,7 @@ readonly ASPIRE_VERSION="13.4.5"
 readonly COPILOT_VERSION="1.0.63"
 readonly OPENCODE_VERSION="1.17.7"
 readonly CODEX_VERSION="0.140.0"
+readonly SKILLS_VERSION="1.5.11"
 
 main() {
   dotnet tool update --global aspire.cli --version "$ASPIRE_VERSION" \
@@ -19,7 +20,10 @@ main() {
   npm install -g \
     "@github/copilot@$COPILOT_VERSION" \
     "opencode-ai@$OPENCODE_VERSION" \
-    "@openai/codex@$CODEX_VERSION"
+    "@openai/codex@$CODEX_VERSION" \
+    "skills@$SKILLS_VERSION"
+
+  skills add mattpocock/skills --global --yes
 
   docker --version
   node --version
@@ -28,6 +32,8 @@ main() {
   copilot --version
   opencode --version
   codex --version
+  skills --version
+  skills ls --global --json >/dev/null
 }
 
 main "$@"
