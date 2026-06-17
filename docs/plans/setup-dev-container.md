@@ -43,10 +43,12 @@ Archivo de tareas para implementar el tooling del Dev Container de a una herrami
 Resultado validado de Task 1:
 
 - La documentación oficial del CLI confirmó soporte de instalación global con `-g` / `--global`.
-- `skills add mattpocock/skills --global --yes` instala fuera del repo: escribe en `~/.agents/skills/**` y `~/.agents/.skill-lock.json`.
+- `skills add mattpocock/skills --global --yes --agent codex github-copilot opencode` instala fuera del repo: escribe en `~/.agents/skills/**` y `~/.agents/.skill-lock.json`.
+- El bootstrap ya no borra `./.agents` ni lockfiles locales del workspace. En cambio, ejecuta las operaciones globales de `skills` desde un directorio temporal para no interferir con posibles skills de proyecto que sí quieran vivir en este repo.
 - La segunda ejecución no creó rutas duplicadas, pero sí reescribió el árbol global completo y el lockfile global. O sea: es estable en layout y apta para bootstrap porque no ensucia el repo, aunque no evita rewrite de timestamps en el home del usuario.
 - Con la preferencia de este repo, la decisión final es instalar `skills` globalmente desde `/.devcontainer/post-create.sh` con versión pinneada del CLI y sin generar artifacts versionados dentro del workspace.
-- Criterio de éxito adoptado: el comando termina con exit code `0`, el instalador informa `Installing to: Codex, GitHub Copilot, OpenCode`, y `skills ls --global --json` lista los skills con `scope: global`.
+- El bootstrap quedó restringido a los tres hosts que este repo usa y documenta: Codex, GitHub Copilot y OpenCode; deja de intentar fan-out hacia otros agentes detectados en la máquina.
+- Criterio de éxito adoptado: el comando termina con exit code `0`, el instalador informa `Installing to: Codex, GitHub Copilot, OpenCode`, `skills ls --global --json` lista los skills con `scope: global`, y el repo no recibe artifacts locales inesperados durante el bootstrap.
 - La verificación explícita quedó documentada en `/.devcontainer/README.md`.
 
 **Task 2: `context-mode` CLI**
@@ -66,7 +68,7 @@ Resultado validado de Task 2:
 - El paquete publicado en npm quedó fijado en `1.0.162`, con `engines.node >= 22.5.0`; el contenedor ya cumple ese requisito con Node `24.16.0`, así que no hizo falta wrapper ni launcher adicional.
 - La decisión final de este repo es instalar `context-mode` globalmente desde `/.devcontainer/post-create.sh`, siguiendo el mismo patrón de CLIs globales pinneadas que ya usan `copilot`, `opencode` y `codex`.
 - El bootstrap ahora deja además la integración global del host para los tres agentes objetivo: Codex (`~/.codex/config.toml` + `~/.codex/hooks.json`), OpenCode (`~/.config/opencode/opencode.jsonc`) y VS Code Copilot (`~/.vscode-server/data/Machine/mcp.json` + `~/.claude/settings.json`).
-- La verificación incorporada al bootstrap es `context-mode doctor`. Se validó además en shell limpia con `context-mode --version` y `context-mode doctor`.
+- La verificación incorporada al bootstrap es `context-mode doctor`. También quedó validado que `context-mode --version` no sirve como sonda de bootstrap en este contenedor porque deja corriendo el servidor MCP.
 - `context-mode` no requiere cuenta propia ni variables de entorno obligatorias para instalarse o correr el diagnóstico local. Si después se integra con Codex, VS Code Copilot u otro host, puede reutilizar auth existente del host o variables como `GITHUB_TOKEN`, `GH_TOKEN` o API keys del proveedor, pero eso queda manual.
 - La documentación del contenedor quedó actualizada en `/.devcontainer/README.md` con la versión, los comandos de verificación y la descripción de las rutas globales que el bootstrap escribe para cada host.
 - El rerun de `/.devcontainer/post-create.sh` terminó con exit code `0` y no rompió la instalación de `context-mode` ni de las demás CLIs ya presentes.

@@ -13,6 +13,7 @@ readonly OPENCODE_VERSION="1.17.7"
 readonly CODEX_VERSION="0.140.0"
 readonly CONTEXT_MODE_VERSION="1.0.162"
 readonly SKILLS_VERSION="1.5.11"
+readonly SKILLS_TARGET_AGENTS=("codex" "github-copilot" "opencode")
 readonly CODEX_CONFIG_PATH="/home/vscode/.codex/config.toml"
 readonly CODEX_HOOKS_PATH="/home/vscode/.codex/hooks.json"
 readonly OPENCODE_CONFIG_PATH="/home/vscode/.config/opencode/opencode.jsonc"
@@ -23,6 +24,24 @@ ensure_directory() {
   local path="$1"
 
   mkdir -p "$path"
+}
+
+run_skills_global_command() {
+  local temp_dir
+
+  temp_dir="$(mktemp -d)"
+
+  (
+    cd "$temp_dir"
+    skills "$@"
+  )
+
+  rm -rf "$temp_dir"
+}
+
+install_global_skills() {
+  run_skills_global_command add mattpocock/skills --global --yes \
+    --agent "${SKILLS_TARGET_AGENTS[@]}"
 }
 
 ensure_codex_context_mode_config() {
@@ -428,7 +447,7 @@ main() {
     "context-mode@$CONTEXT_MODE_VERSION" \
     "skills@$SKILLS_VERSION"
 
-  skills add mattpocock/skills --global --yes
+  install_global_skills
 
   ensure_codex_context_mode_config
   ensure_codex_context_mode_hooks
@@ -443,7 +462,6 @@ main() {
   copilot --version
   opencode --version
   codex --version
-  context-mode --version
   context-mode doctor
   test -f "$CODEX_CONFIG_PATH"
   test -f "$CODEX_HOOKS_PATH"
@@ -451,7 +469,7 @@ main() {
   test -f "$VSCODE_REMOTE_MCP_PATH"
   test -f "$CLAUDE_SETTINGS_PATH"
   skills --version
-  skills ls --global --json >/dev/null
+  run_skills_global_command ls --global --json >/dev/null
 }
 
 main "$@"

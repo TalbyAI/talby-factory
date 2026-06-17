@@ -45,8 +45,16 @@ user instead of writing generated skill artifacts into the repository.
 The bootstrap installs the pinned `skills` CLI and then runs:
 
 ```bash
-skills add mattpocock/skills --global --yes
+skills add mattpocock/skills --global --yes --agent codex github-copilot opencode
 ```
+
+The bootstrap intentionally limits `skills` fan-out to the three agent hosts this
+repo already configures: Codex, GitHub Copilot, and OpenCode.
+
+All global `skills` operations that the bootstrap performs are executed from a
+temporary directory so the CLI can write any transient working files there
+instead of mutating repository-local skill state such as `./.agents` or local
+lockfiles.
 
 This writes the installed skills to `~/.agents/skills/` and the global
 lockfile to `~/.agents/.skill-lock.json`.
@@ -78,13 +86,14 @@ aspire --version
 copilot --version
 opencode --version
 codex --version
-context-mode --version
 context-mode doctor
 skills --version
 ```
 
 `context-mode doctor` is the bootstrap smoke test because the official docs use
-it to validate runtimes and SQLite/FTS5 support from the installed CLI.
+it to validate runtimes and SQLite/FTS5 support from the installed CLI. In this
+container, `context-mode --version` starts the MCP server process instead of
+acting as a one-shot version probe, so the bootstrap intentionally avoids it.
 After the bootstrap writes the global host configuration, Codex-specific hook
 warnings should be limited to trust or runtime conditions rather than missing
 files.
