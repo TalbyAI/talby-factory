@@ -20,7 +20,22 @@ post-create bootstrap script.
 * GitHub Copilot CLI `1.0.63`
 * OpenCode CLI `1.17.7`
 * Codex CLI `0.140.0`
+* Context Mode CLI `1.0.162`
 * Skills CLI `1.5.11`
+
+## Global Context Mode Host Wiring
+
+The Dev Container also bootstraps global `context-mode` host integration for the
+three agent hosts already installed in the container:
+
+* Codex CLI via `~/.codex/config.toml` and `~/.codex/hooks.json`
+* OpenCode via `~/.config/opencode/opencode.jsonc`
+* VS Code Copilot via remote-user MCP config at
+   `~/.vscode-server/data/Machine/mcp.json` and global hook config at
+   `~/.claude/settings.json`
+
+This keeps the hook and MCP wiring out of the repository and makes the setup
+repeatable on container rebuild.
 
 ## Global Agent Skills
 
@@ -63,7 +78,25 @@ aspire --version
 copilot --version
 opencode --version
 codex --version
+context-mode --version
+context-mode doctor
 skills --version
+```
+
+`context-mode doctor` is the bootstrap smoke test because the official docs use
+it to validate runtimes and SQLite/FTS5 support from the installed CLI.
+After the bootstrap writes the global host configuration, Codex-specific hook
+warnings should be limited to trust or runtime conditions rather than missing
+files.
+
+To inspect the generated global host config:
+
+```bash
+cat ~/.codex/config.toml
+cat ~/.codex/hooks.json
+cat ~/.config/opencode/opencode.jsonc
+cat ~/.vscode-server/data/Machine/mcp.json
+cat ~/.claude/settings.json
 ```
 
 To verify the globally installed agent skills:
@@ -83,6 +116,20 @@ prints `Installing to: Codex, GitHub Copilot, OpenCode`, and `skills ls
 Some CLIs may require authentication after the container starts.
 Use the normal sign-in flow for each tool inside the container when you
 first need it.
+
+`context-mode` itself does not require a separate account to install or run its
+local diagnostics. If you later wire it into an agent host, that integration may
+reuse the host's existing auth or environment variables such as `GITHUB_TOKEN`,
+`GH_TOKEN`, or provider API keys. That setup stays manual and is not part of the
+bootstrap.
+
+OpenCode does not need a separate stdio MCP block because `context-mode` runs as
+an OpenCode plugin. VS Code Copilot still requires normal MCP server trust inside
+the editor the first time the global user-profile server is discovered.
+
+The global `~/.claude/settings.json` hook file is written specifically for the
+VS Code Copilot adapter commands. If you later use Claude Code in the same
+container, review that file before reusing it there.
 
 > [!IMPORTANT]
 > The bootstrap script installs the CLIs, but it does not persist your

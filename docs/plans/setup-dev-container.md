@@ -50,15 +50,27 @@ Resultado validado de Task 1:
 - La verificación explícita quedó documentada en `/.devcontainer/README.md`.
 
 **Task 2: `context-mode` CLI**
-- [ ] Identificar el paquete o binario oficial para Linux y su método de instalación reproducible.
-- [ ] Confirmar si conviene instalarlo globalmente en el contenedor o si necesita wrapper/comando de arranque.
-- [ ] Agregar la versión fijada al bloque de constantes de /.devcontainer/post-create.sh.
-- [ ] Incorporar la instalación siguiendo el estilo ya usado para `copilot`, `opencode` y `codex`.
-- [ ] Añadir el comando de verificación al final del script.
-- [ ] Confirmar si requiere variables de entorno o auth posterior al bootstrap.
-- [ ] Documentar en /.devcontainer/README.md cómo verificarlo y qué queda manual.
-- [ ] Rebuild del contenedor o rerun del bootstrap para validar que no rompe instalaciones previas.
-- [ ] Ejecutar su verificación en terminal limpia antes de seguir.
+- [x] Identificar el paquete o binario oficial para Linux y su método de instalación reproducible.
+- [x] Confirmar si conviene instalarlo globalmente en el contenedor o si necesita wrapper/comando de arranque.
+- [x] Agregar la versión fijada al bloque de constantes de /.devcontainer/post-create.sh.
+- [x] Incorporar la instalación siguiendo el estilo ya usado para `copilot`, `opencode` y `codex`.
+- [x] Añadir el comando de verificación al final del script.
+- [x] Confirmar si requiere variables de entorno o auth posterior al bootstrap.
+- [x] Documentar en /.devcontainer/README.md cómo verificarlo y qué queda manual.
+- [x] Rebuild del contenedor o rerun del bootstrap para validar que no rompe instalaciones previas.
+- [x] Ejecutar su verificación en terminal limpia antes de seguir.
+
+Resultado validado de Task 2:
+
+- La documentación oficial confirmó que el canal recomendado para Linux es `npm install -g context-mode` y que el binario esperado en `PATH` es `context-mode`.
+- El paquete publicado en npm quedó fijado en `1.0.162`, con `engines.node >= 22.5.0`; el contenedor ya cumple ese requisito con Node `24.16.0`, así que no hizo falta wrapper ni launcher adicional.
+- La decisión final de este repo es instalar `context-mode` globalmente desde `/.devcontainer/post-create.sh`, siguiendo el mismo patrón de CLIs globales pinneadas que ya usan `copilot`, `opencode` y `codex`.
+- El bootstrap ahora deja además la integración global del host para los tres agentes objetivo: Codex (`~/.codex/config.toml` + `~/.codex/hooks.json`), OpenCode (`~/.config/opencode/opencode.jsonc`) y VS Code Copilot (`~/.vscode-server/data/Machine/mcp.json` + `~/.claude/settings.json`).
+- La verificación incorporada al bootstrap es `context-mode doctor`. Se validó además en shell limpia con `context-mode --version` y `context-mode doctor`.
+- `context-mode` no requiere cuenta propia ni variables de entorno obligatorias para instalarse o correr el diagnóstico local. Si después se integra con Codex, VS Code Copilot u otro host, puede reutilizar auth existente del host o variables como `GITHUB_TOKEN`, `GH_TOKEN` o API keys del proveedor, pero eso queda manual.
+- La documentación del contenedor quedó actualizada en `/.devcontainer/README.md` con la versión, los comandos de verificación y la descripción de las rutas globales que el bootstrap escribe para cada host.
+- El rerun de `/.devcontainer/post-create.sh` terminó con exit code `0` y no rompió la instalación de `context-mode` ni de las demás CLIs ya presentes.
+- `context-mode doctor` reportó PASS en storage, server test y FTS5/SQLite. En la validación acotada posterior al wiring también confirmó PASS para los hooks detectables de Claude/VS Code y terminó con `EXIT:0`; el único WARN restante fue `Plugin enabled`, esperable cuando el entorno opera en modo MCP standalone y no como plugin instalado de Claude Code.
 
 **Task 3: `gitnexus` CLI**
 - [ ] Identificar el canal oficial de instalación para Linux y verificar que funcione sin interacción.
