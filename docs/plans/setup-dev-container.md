@@ -95,7 +95,17 @@ Resultado validado de Task 3:
 - El flujo de auth manual quedó documentado en `/.devcontainer/README.md` sin persistir credenciales en archivos versionados.
 - La rerun completa de `/.devcontainer/post-create.sh` terminó sin error después de sumar GitNexus. El bootstrap volvió a instalar y verificar todas las herramientas esperadas, y `gitnexus --version` junto con `gitnexus doctor` pasaron dentro de la misma ejecución.
 
-**Task 4: `gentle-ai` CLI**
+**Task 4: `gh` CLI**
+- [ ] Identificar el canal oficial de instalación para Linux y la estrategia correcta para fijar versión.
+- [ ] Confirmar si conviene instalar GitHub CLI desde repositorio apt oficial, paquete descargable o binario standalone para este contenedor.
+- [ ] Definir si `gh` debe quedar instalado desde /.devcontainer/post-create.sh o si requiere otro punto de bootstrap.
+- [ ] Añadir el comando de verificación real para `gh` al criterio de validación de la tarea.
+- [ ] Confirmar si requiere autenticación, token o setup manual posterior para que el bootstrap siga siendo no interactivo.
+- [ ] Documentar el flujo manual de `gh auth login` o alternativa equivalente sin persistir secretos en el repo.
+- [ ] Verificar compatibilidad con el usuario remoto `vscode` y el `PATH` efectivo del contenedor.
+- [ ] Repetir bootstrap o rerun acotado para comprobar que la instalación es estable e idempotente.
+
+**Task 5: `gentle-ai` CLI**
 - [ ] Identificar el canal oficial de instalación para Linux y su forma correcta de pinnear versión.
 - [ ] Confirmar si `gentle-ai` puede instalarse de forma no interactiva en /.devcontainer/post-create.sh.
 - [ ] Determinar si requiere también `gga` como dependencia separada o integrada.
@@ -105,7 +115,7 @@ Resultado validado de Task 3:
 - [ ] Documentar claramente qué parte queda instalada y qué parte requiere setup manual posterior.
 - [ ] Validar que el CLI arranca en terminal del contenedor sin errores básicos.
 
-**Task 5: Engram para `gentle-ai`**
+**Task 6: Engram para `gentle-ai`**
 - [ ] Confirmar si Engram requiere archivo de proyecto para resolver correctamente este repo.
 - [ ] Si aplica, definir el contenido y la ubicación de /.engram/config.json.
 - [ ] Asegurar que la configuración de proyecto evita fallback a un proyecto incorrecto.
@@ -114,7 +124,7 @@ Resultado validado de Task 3:
 - [ ] Documentar el comportamiento esperado y cualquier prerequisito externo.
 - [ ] No avanzar a cerrar esta tarea hasta comprobar que la identidad del proyecto es estable.
 
-**Task 6: `gga` para agentes instalados**
+**Task 7: `gga` para agentes instalados**
 - [ ] Confirmar qué es exactamente `gga` en este contexto y su canal oficial de instalación.
 - [ ] Verificar si es una CLI independiente o parte del ecosistema de `gentle-ai`.
 - [ ] Definir si debe instalarse globalmente en el contenedor o configurarse por agente/workspace.
@@ -123,7 +133,7 @@ Resultado validado de Task 3:
 - [ ] Documentar limitaciones, auth y dependencias cruzadas con `gentle-ai`.
 - [ ] Validar que la instalación/configuración no interfiera con el resto de agentes ya instalados en el contenedor.
 
-**Task 7: `markdownlint-cli2`**
+**Task 8: `markdownlint-cli2`**
 - [x] Confirmar el paquete oficial exacto y su instalación global reproducible.
 - [x] Fijar versión y sumarla a /.devcontainer/post-create.sh.
 - [x] Añadir comando de verificación al bloque final del script.
@@ -140,7 +150,7 @@ Resultado validado de Task 7:
 - La guía del contenedor quedó actualizada con comandos mínimos de uso y verificación: `markdownlint-cli2 "**/*.md"` y `markdownlint-cli2 --fix "**/*.md"`.
 - La rerun completa del bootstrap terminó sin conflicto con otras herramientas Node globales ya presentes; `markdownlint-cli2` quedó accesible en `/usr/local/share/nvm/versions/node/v24.16.0/bin/markdownlint-cli2`.
 
-**Task 8: `csharpier`**
+**Task 9: `csharpier`**
 - [x] Confirmar si `csharpier` debe instalarse como `.NET global tool` y cuál es su versión objetivo.
 - [x] Añadir constante de versión y comando `dotnet tool update --global` o `install --global` en /.devcontainer/post-create.sh.
 - [x] Verificar que el `PATH` actual ya cubre tools para el binario.
@@ -159,7 +169,7 @@ Resultado validado de Task 8:
 - La guía del contenedor quedó actualizada con uso mínimo real: `csharpier format .` y `csharpier check .`.
 - La rerun completa del bootstrap confirmó convivencia correcta con `aspire.cli`; ambos global tools siguen resolviendo sin wiring extra.
 
-**Task 9: `biome`**
+**Task 10: `biome`**
 - [x] Confirmar el paquete oficial exacto y la forma de instalación global recomendada para Linux.
 - [x] Fijar versión e incorporarla al bloque npm global de /.devcontainer/post-create.sh si corresponde.
 - [x] Añadir verificación del binario al final del script.
@@ -176,7 +186,7 @@ Resultado validado de Task 9:
 - La guía del contenedor quedó actualizada con validación y uso mínimo real: `biome --version`, `biome check .` y `biome format .`.
 - La rerun completa del bootstrap confirmó que `@biomejs/biome` no interfiere con las demás herramientas Node globales del entorno y que el binario queda accesible en `/usr/local/share/nvm/versions/node/v24.16.0/bin/biome`.
 
-**Task 10: Documentación final del contenedor**
+**Task 11: Documentación final del contenedor**
 - [ ] Actualizar /.devcontainer/README.md con la lista final de herramientas incluidas.
 - [ ] Añadir comandos de verificación para cada herramienta instalada.
 - [ ] Añadir notas de autenticación para las herramientas que lo requieran.
@@ -199,10 +209,11 @@ Resultado validado de Task 9:
 3. `csharpier`
 4. `context-mode`
 5. `gitnexus`
-6. `gentle-ai`
-7. `engram`
-8. `gga`
-9. `mattpocock/skills`
-10. documentación final
+6. `gh`
+7. `gentle-ai`
+8. `engram`
+9. `gga`
+10. `mattpocock/skills`
+11. documentación final
 
 Si querés, el siguiente paso lógico es que convierta esta checklist en un archivo real dentro del repo, por ejemplo /.devcontainer/tooling-tasks.md, para que quede versionado y visible para cualquiera que trabaje en el contenedor.
