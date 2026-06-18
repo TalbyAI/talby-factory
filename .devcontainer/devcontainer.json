@@ -20,6 +20,7 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
+				"tamasfe.even-better-toml",
 				"github.copilot-chat",
 				"ms-dotnettools.csdevkit",
 				"ms-azuretools.vscode-docker",
