@@ -4,7 +4,7 @@
       {
         "hooks": [
           {
-            "command": "gentle-ai skill-registry refresh --quiet --no-gitignore --cwd \"$PWD\" || true",
+            "command": "repo_root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" && gentle-ai skill-registry refresh --quiet --no-gitignore --cwd \"$repo_root\" || true",
             "statusMessage": "Refreshing skill registry",
             "timeout": 30,
             "type": "command"
