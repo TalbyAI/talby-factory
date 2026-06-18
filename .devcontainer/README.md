@@ -7,8 +7,97 @@ description: Setup and usage notes for the talby-factory development container.
 
 This folder contains the DevContainer definition for this repository.
 The container keeps the official .NET image as the base and layers the
-project-specific tooling on top through Dev Container features and a
-post-create bootstrap script.
+project-specific tooling on top through Dev Container features, a
+base post-create bootstrap script, host Git config inheritance, and a separate
+optional host setup script.
+
+## Host Git Identity and SSH Signing
+
+The Dev Container now mounts the host `~/.gitconfig` read-only at
+`/home/vscode/.gitconfig-host`. During bootstrap, the container evaluates that
+config with its host-side includes, extracts only the compatible identity and
+signing settings into a sanitized include file, and registers that sanitized
+file as a global Git include for the `vscode` user.
+
+This gives the container access to shared Git identity and signing settings
+from the host without copying secrets into the repository and without importing
+host-only settings such as Windows `safe.directory` entries or `gpg.program`
+paths that do not exist on Linux.
+
+If the evaluated host config still uses OpenPGP signing, the bootstrap now
+falls back to SSH signing automatically when the forwarded SSH agent exposes at
+least one public key. It prefers an `ssh-ed25519` key and otherwise uses the
+first available key from the agent.
+
+The current setup is intended for:
+
+* inheriting `user.name` and `user.email` from the host
+* inheriting SSH commit-signing settings from the host
+* continuing to use the SSH agent that VS Code already forwards into the
+  container
+
+The recommended signing strategy for this repository is SSH signing instead of
+OpenPGP/GPG signing. SSH signing reuses the forwarded host SSH agent and avoids
+having to move private GPG key material or agent sockets into the container.
+
+### Recommended Host Git Configuration
+
+Add the following to the host Git config that you want the container to inherit:
+
+```ini
+[user]
+   name = Your Name
+   email = you@example.com
+   signingKey = ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA... you@example.com
+
+[gpg]
+   format = ssh
+
+[commit]
+   gpgsign = true
+
+[tag]
+   gpgSign = true
+```
+
+If you prefer not to store the SSH public key inline in `user.signingKey`, Git
+also supports pointing `user.signingKey` at a public key file on the host.
+
+### Optional Signature Verification Settings
+
+If you also want local signature verification inside the container, add an
+allowed signers file on the host and reference it from your inherited config:
+
+```ini
+[gpg "ssh"]
+   allowedSignersFile = ~/.config/git/allowed_signers
+```
+
+The signing step itself does not require `allowedSignersFile`; it is only
+needed for local verification workflows such as `git log --show-signature`.
+
+### Notes About Host Config Scope
+
+The bootstrap always imports `user.name` and `user.email` from the evaluated
+host config when those values exist.
+
+SSH signing settings are imported only when the evaluated host config is
+already SSH-based and portable inside the container, specifically when:
+
+* `gpg.format = ssh`
+* `user.signingKey` is present
+
+When the host is configured for OpenPGP signing or uses a platform-specific
+`gpg.program`, the bootstrap intentionally skips signing settings rather than
+carrying a broken configuration into Linux.
+
+When an SSH key is available from the forwarded agent, that OpenPGP case is
+upgraded automatically to container-local SSH signing instead of being left
+unsigned.
+
+Other host-specific sections, helpers, includes, and `safe.directory` entries
+are intentionally ignored so the container does not inherit machine-specific
+paths that are invalid on Linux.
 
 ## Included Tooling
 
@@ -28,10 +117,26 @@ post-create bootstrap script.
 * Biome `2.5.0`
 * Skills CLI `1.5.11`
 
+## Optional Host-Level Agent Setup
+
+The Dev Container now separates base container bootstrap from optional
+user-level agent host personalization:
+
+* `postCreateCommand` runs `bash .devcontainer/post-create.sh`
+* optional host setup runs manually with
+   `bash .devcontainer/post-create-host-setup.sh`
+
+The base bootstrap installs the pinned CLIs and verifies they are available in
+the container. The optional script applies global `skills` installation and
+Context Mode host wiring for the current `vscode` user.
+
+Run the optional script only when you want this container instance to also own
+global agent personalization state under the user home directory.
+
 ## Global Context Mode Host Wiring
 
-The Dev Container also bootstraps global `context-mode` host integration for the
-three agent hosts already installed in the container:
+The optional host setup script bootstraps global `context-mode` host integration
+for the three agent hosts already installed in the container:
 
 * Codex CLI via `~/.codex/config.toml` and `~/.codex/hooks.json`
 * OpenCode via `~/.config/opencode/opencode.jsonc`
@@ -44,8 +149,8 @@ repeatable on container rebuild.
 
 ## Global Agent Skills
 
-The Dev Container bootstraps `mattpocock/skills` globally for the `vscode`
-user instead of writing generated skill artifacts into the repository.
+The optional host setup script bootstraps `mattpocock/skills` globally for the
+`vscode` user instead of writing generated skill artifacts into the repository.
 
 The bootstrap installs the pinned `skills` CLI and then runs:
 
@@ -70,18 +175,48 @@ and install the skills for Codex, GitHub Copilot, and OpenCode.
 ## Files
 
 * [devcontainer.json](./devcontainer.json) defines the container image,
-  features, VS Code customizations, and lifecycle commands.
+  features, host Git config mount, VS Code customizations, and lifecycle
+  commands.
 * [post-create.sh](./post-create.sh) installs the pinned CLI tools and
-  verifies that they are available after the container is created.
+   verifies that they are available after the container is created and
+   registers the mounted host Git config as a global include when present.
+* [post-create-host-setup.sh](./post-create-host-setup.sh) applies optional
+   global skills installation and Context Mode host wiring for the current user.
 
 ## How To Use It
 
 1. Open the repository in Visual Studio Code.
 2. Run the Dev Containers command to reopen the workspace in the
    container.
-3. Wait for the container build and the `postCreateCommand` bootstrap to
+3. Wait for the container build and the base `postCreateCommand` bootstrap to
    finish.
-4. Open a new terminal in the container and verify the tools if needed.
+4. Verify that host Git identity is visible inside the container:
+
+```bash
+git config --show-origin --get user.name
+git config --show-origin --get user.email
+git config --show-origin --get gpg.format
+git config --show-origin --get user.signingkey
+```
+
+5. If you need global agent personalization in this container instance, run:
+
+```bash
+bash .devcontainer/post-create-host-setup.sh
+```
+
+6. Open a new terminal in the container and verify the tools if needed.
+
+## Verification Checklist
+
+Use the checks below according to the script you are validating. The two flows
+have different goals and should be debugged separately.
+
+### Base Bootstrap Checks
+
+These checks map to `bash .devcontainer/post-create.sh`. They confirm that the
+container-level CLI installation succeeded and that the pinned tools are
+available on the container `PATH`.
 
 ```bash
 docker --version
@@ -95,21 +230,57 @@ context-mode doctor
 gitnexus --version
 gitnexus doctor
 gh --version
-markdownlint-cli2 --help | head -n 2
+markdownlint-cli2 --version
 csharpier --version
 biome --version
 skills --version
+git config --show-origin --get user.name
+git config --show-origin --get user.email
+git config --show-origin --get gpg.format
+git config --show-origin --get user.signingkey
 ```
+
+`context-mode doctor` appears in the base bootstrap because it is the current
+runtime smoke test for the installed CLI itself: runtimes, server startup, and
+SQLite/FTS5 support.
+
+If host Git identity is configured correctly, the `git config --show-origin`
+commands above should resolve from `/home/vscode/.gitconfig` or from the
+sanitized include path under `~/.config/git/host-identity.inc`.
+
+### Optional Host Setup Checks
+
+Run these only after `bash .devcontainer/post-create-host-setup.sh`. They do
+not validate container-wide installation; they validate user-level agent state
+written under the `vscode` home directory.
+
+To verify the optional host-level setup after running it:
+
+```bash
+context-mode doctor
+test -f ~/.agents/.skill-lock.json
+test -f ~/.codex/config.toml
+test -f ~/.codex/hooks.json
+test -f ~/.config/opencode/opencode.jsonc
+test -f ~/.vscode-server/data/Machine/mcp.json
+test -f ~/.claude/settings.json
+skills ls --global --json
+```
+
+Here `context-mode doctor` serves a different purpose than in the base
+bootstrap: it confirms that the global host wiring now exists and that any
+remaining warnings are about trust or host runtime conditions rather than
+missing config files.
 
 `context-mode doctor` is the bootstrap smoke test because the official docs use
 it to validate runtimes and SQLite/FTS5 support from the installed CLI. In this
 container, `context-mode --version` starts the MCP server process instead of
 acting as a one-shot version probe, so the bootstrap intentionally avoids it.
-After the bootstrap writes the global host configuration, Codex-specific hook
-warnings should be limited to trust or runtime conditions rather than missing
-files.
+After the optional host setup writes the global host configuration,
+Codex-specific hook warnings should be limited to trust or runtime conditions
+rather than missing files.
 
-To inspect the generated global host config:
+To inspect the generated global host config after the optional script runs:
 
 ```bash
 cat ~/.codex/config.toml
@@ -119,7 +290,7 @@ cat ~/.vscode-server/data/Machine/mcp.json
 cat ~/.claude/settings.json
 ```
 
-To verify the globally installed agent skills:
+To verify the globally installed agent skills after the optional script runs:
 
 ```bash
 test -f ~/.agents/.skill-lock.json
@@ -127,8 +298,9 @@ find ~/.agents/skills -maxdepth 2 -name SKILL.md | head
 skills ls --global --json
 ```
 
-The install is considered successful when the command exits without error,
-prints `Installing to: Codex, GitHub Copilot, OpenCode`, and `skills ls
+The optional host setup is considered successful when the command exits
+without error, prints `Installing to: Codex, GitHub Copilot, OpenCode`,
+and `skills ls
 --global --json` reports the installed skills with `scope: global`.
 
 GitNexus is installed globally with `npm install -g gitnexus@1.6.7`.
@@ -154,7 +326,7 @@ gh repo view
 
 `markdownlint-cli2` is installed globally with
 `npm install -g markdownlint-cli2@0.22.1`.
-The bootstrap uses `markdownlint-cli2 --help` as the availability probe.
+The bootstrap uses `markdownlint-cli2 --version` as the availability probe.
 No repository configuration is created for it yet, so the tool is installed and
 ready, but rules and ignores still depend on future repo-level `.markdownlint*`
 or `.markdownlint-cli2.*` configuration if the project adopts one.
@@ -203,7 +375,7 @@ first need it.
 local diagnostics. If you later wire it into an agent host, that integration may
 reuse the host's existing auth or environment variables such as `GITHUB_TOKEN`,
 `GH_TOKEN`, or provider API keys. That setup stays manual and is not part of the
-bootstrap.
+base bootstrap.
 
 GitNexus does not require GitHub, GitLab, or token-based authentication to
 install, run `gitnexus doctor`, or index local repositories with `gitnexus
@@ -238,8 +410,10 @@ VS Code Copilot adapter commands. If you later use Claude Code in the same
 container, review that file before reusing it there.
 
 > [!IMPORTANT]
-> The bootstrap script installs the CLIs, but it does not persist your
-> credentials for you. Sign in from inside the container when required.
+> The base bootstrap script installs the CLIs, but it does not persist your
+> credentials for you. The optional host setup script writes user-level agent
+> config only when you run it explicitly. Sign in from inside the container when
+> required.
 
 ## Updating Versions
 

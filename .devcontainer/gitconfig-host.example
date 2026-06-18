@@ -1,0 +1,16 @@
+[user]
+	name = Your Name
+	email = you@example.com
+	signingKey = ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA... you@example.com
+
+[gpg]
+	format = ssh
+
+[commit]
+	gpgsign = true
+
+[tag]
+	gpgSign = true
+
+[gpg "ssh"]
+	allowedSignersFile = ~/.config/git/allowed_signers

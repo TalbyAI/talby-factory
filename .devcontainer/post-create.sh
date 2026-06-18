@@ -18,13 +18,10 @@ readonly MARKDOWNLINT_CLI2_VERSION="0.22.1"
 readonly CSHARPIER_VERSION="1.3.0"
 readonly BIOME_VERSION="2.5.0"
 readonly SKILLS_VERSION="1.5.11"
-readonly SKILLS_TARGET_AGENTS=("codex" "github-copilot" "opencode")
-readonly CODEX_CONFIG_PATH="/home/vscode/.codex/config.toml"
-readonly CODEX_HOOKS_PATH="/home/vscode/.codex/hooks.json"
-readonly OPENCODE_CONFIG_PATH="/home/vscode/.config/opencode/opencode.jsonc"
-readonly CLAUDE_SETTINGS_PATH="/home/vscode/.claude/settings.json"
-readonly VSCODE_REMOTE_MCP_PATH="/home/vscode/.vscode-server/data/Machine/mcp.json"
 readonly GH_INSTALL_ROOT="/usr/local/lib/gh-cli"
+readonly HOST_GITCONFIG_PATH="/home/vscode/.gitconfig-host"
+readonly SANITIZED_HOST_GITCONFIG_PATH="/home/vscode/.config/git/host-identity.inc"
+readonly ALLOWED_SIGNERS_PATH="/home/vscode/.config/git/allowed_signers"
 
 ensure_directory() {
   local path="$1"
@@ -32,37 +29,163 @@ ensure_directory() {
   mkdir -p "$path"
 }
 
-warn() {
-  local message="$1"
+select_ssh_signing_key() {
+  ssh-add -L 2>/dev/null | awk '
+    /ssh-ed25519/ {
+      found = 1
+      print
+      exit
+    }
 
-  printf 'WARNING: %s\n' "$message" >&2
+    NR == 1 {
+      first = $0
+    }
+
+    END {
+      if (found != 1 && NR > 0 && first != "") {
+        print first
+      }
+    }
+  '
 }
 
-run_optional_step() {
-  local description="$1"
-  shift
+write_allowed_signers_file() {
+  local principal="$1"
+  local public_key="$2"
 
-  if ! "$@"; then
-    warn "$description failed during container bootstrap; rerun 'bash .devcontainer/post-create.sh' after attach if you still need that setup."
+  ensure_directory "$(dirname "$ALLOWED_SIGNERS_PATH")"
+  printf '%s %s\n' "$principal" "$public_key" >"$ALLOWED_SIGNERS_PATH"
+}
+
+write_sanitized_git_host_config() {
+  local agent_public_key
+  local commit_gpgsign
+  local gpg_format
+  local skipped_signing_settings=0
+  local tag_gpgsign
+  local temp_file
+  local user_email
+  local user_name
+  local user_signing_key
+  local allowed_signers_file
+  local signing_key_source="host"
+
+  ensure_directory "$(dirname "$SANITIZED_HOST_GITCONFIG_PATH")"
+
+  temp_file="$(mktemp)"
+
+  user_name="$(git config --file "$HOST_GITCONFIG_PATH" --includes --get user.name || true)"
+  user_email="$(git config --file "$HOST_GITCONFIG_PATH" --includes --get user.email || true)"
+  user_signing_key="$(git config --file "$HOST_GITCONFIG_PATH" --includes --get user.signingKey || true)"
+  gpg_format="$(git config --file "$HOST_GITCONFIG_PATH" --includes --get gpg.format || true)"
+  commit_gpgsign="$(git config --file "$HOST_GITCONFIG_PATH" --includes --get commit.gpgsign || true)"
+  tag_gpgsign="$(git config --file "$HOST_GITCONFIG_PATH" --includes --get tag.gpgsign || true)"
+  allowed_signers_file="$(git config --file "$HOST_GITCONFIG_PATH" --includes --get gpg.ssh.allowedSignersFile || true)"
+
+  if [[ -n "$gpg_format" && "$gpg_format" != "ssh" ]]; then
+    skipped_signing_settings=1
+
+    agent_public_key="$(select_ssh_signing_key || true)"
+
+    if [[ -n "$agent_public_key" ]]; then
+      gpg_format="ssh"
+      user_signing_key="$agent_public_key"
+      signing_key_source="agent"
+
+      if [[ -z "$commit_gpgsign" ]]; then
+        commit_gpgsign="true"
+      fi
+
+      if [[ -z "$tag_gpgsign" ]]; then
+        tag_gpgsign="true"
+      fi
+
+      if [[ -z "$allowed_signers_file" && -n "$user_email" ]]; then
+        write_allowed_signers_file "$user_email" "$agent_public_key"
+        allowed_signers_file="$ALLOWED_SIGNERS_PATH"
+      fi
+    fi
+  fi
+
+  {
+    if [[ -n "$user_name" || -n "$user_email" || ( "$gpg_format" == "ssh" && -n "$user_signing_key" ) ]]; then
+      echo "[user]"
+
+      if [[ -n "$user_name" ]]; then
+        printf '\tname = %s\n' "$user_name"
+      fi
+
+      if [[ -n "$user_email" ]]; then
+        printf '\temail = %s\n' "$user_email"
+      fi
+
+      if [[ "$gpg_format" == "ssh" && -n "$user_signing_key" ]]; then
+        printf '\tsigningKey = %s\n' "$user_signing_key"
+      fi
+    fi
+
+    if [[ "$gpg_format" == "ssh" && -n "$user_signing_key" ]]; then
+      echo
+      echo "[gpg]"
+      printf '\tformat = %s\n' "$gpg_format"
+
+      if [[ -n "$commit_gpgsign" ]]; then
+        echo
+        echo "[commit]"
+        printf '\tgpgsign = %s\n' "$commit_gpgsign"
+      fi
+
+      if [[ -n "$tag_gpgsign" ]]; then
+        echo
+        echo "[tag]"
+        printf '\tgpgSign = %s\n' "$tag_gpgsign"
+      fi
+
+      if [[ -n "$allowed_signers_file" ]]; then
+        echo
+        echo '[gpg "ssh"]'
+        printf '\tallowedSignersFile = %s\n' "$allowed_signers_file"
+      fi
+    fi
+  } >"$temp_file"
+
+  mv "$temp_file" "$SANITIZED_HOST_GITCONFIG_PATH"
+
+  if [[ "$skipped_signing_settings" -eq 1 ]]; then
+    if [[ "$signing_key_source" == "agent" ]]; then
+      echo "Replaced non-portable host signing settings with SSH signing from the forwarded agent."
+    else
+      echo "Skipping host signing settings because only SSH signing is portable inside the container."
+    fi
   fi
 }
 
-run_skills_global_command() {
-  local temp_dir
+remove_git_global_include_path() {
+  local include_path="$1"
 
-  temp_dir="$(mktemp -d)"
-
-  (
-    cd "$temp_dir"
-    skills "$@"
-  )
-
-  rm -rf "$temp_dir"
+  while git config --global --get-all include.path | grep -Fxq "$include_path"; do
+    git config --global --unset-all include.path "$include_path"
+  done
 }
 
-install_global_skills() {
-  run_skills_global_command add mattpocock/skills --global --yes \
-    --agent "${SKILLS_TARGET_AGENTS[@]}"
+ensure_git_host_config_include() {
+  local include_paths
+
+  if [[ ! -f "$HOST_GITCONFIG_PATH" ]]; then
+    echo "Skipping host Git include because $HOST_GITCONFIG_PATH is not mounted."
+    return
+  fi
+
+  write_sanitized_git_host_config
+  remove_git_global_include_path "$HOST_GITCONFIG_PATH"
+
+  include_paths="$(git config --global --get-all include.path || true)"
+
+  if printf '%s\n' "$include_paths" | grep -Fxq "$SANITIZED_HOST_GITCONFIG_PATH"; then
+    return
+  fi
+
+  git config --global --add include.path "$SANITIZED_HOST_GITCONFIG_PATH"
 }
 
 install_gh_cli() {
@@ -98,402 +221,12 @@ install_gh_cli() {
     -C "$GH_INSTALL_ROOT"
   sudo install -m 0755 "$GH_INSTALL_ROOT/bin/gh" /usr/local/bin/gh
 
-  rm -rf "$temp_dir"
-}
-
-ensure_codex_context_mode_config() {
-  local temp_file
-
-  ensure_directory "$(dirname "$CODEX_CONFIG_PATH")"
-
-  if [[ ! -f "$CODEX_CONFIG_PATH" ]]; then
-    cat >"$CODEX_CONFIG_PATH" <<'EOF'
-[features]
-hooks = true
-plugin_hooks = true
-
-[mcp_servers.context-mode]
-command = "context-mode"
-
-[mcp_servers.context-mode.env]
-CONTEXT_MODE_PLATFORM = "codex"
-EOF
-    return
-  fi
-
-  temp_file="$(mktemp)"
-
-  awk '
-    BEGIN {
-      in_features = 0
-      saw_features = 0
-      saw_hooks = 0
-      saw_plugin_hooks = 0
-    }
-
-    /^\[features\]$/ {
-      saw_features = 1
-      in_features = 1
-      print
-      next
-    }
-
-    /^\[/ {
-      if (in_features == 1) {
-        if (saw_hooks == 0) {
-          print "hooks = true"
-        }
-        if (saw_plugin_hooks == 0) {
-          print "plugin_hooks = true"
-        }
-        in_features = 0
-      }
-
-      print
-      next
-    }
-
-    {
-      if (in_features == 1) {
-        if ($0 ~ /^hooks = /) {
-          saw_hooks = 1
-        }
-        if ($0 ~ /^plugin_hooks = /) {
-          saw_plugin_hooks = 1
-        }
-      }
-
-      print
-    }
-
-    END {
-      if (in_features == 1) {
-        if (saw_hooks == 0) {
-          print "hooks = true"
-        }
-        if (saw_plugin_hooks == 0) {
-          print "plugin_hooks = true"
-        }
-      }
-
-      if (saw_features == 0) {
-        print ""
-        print "[features]"
-        print "hooks = true"
-        print "plugin_hooks = true"
-      }
-    }
-  ' "$CODEX_CONFIG_PATH" >"$temp_file"
-
-  mv "$temp_file" "$CODEX_CONFIG_PATH"
-
-  if ! grep -Fq '[mcp_servers.context-mode]' "$CODEX_CONFIG_PATH"; then
-    cat >>"$CODEX_CONFIG_PATH" <<'EOF'
-
-[mcp_servers.context-mode]
-command = "context-mode"
-
-[mcp_servers.context-mode.env]
-CONTEXT_MODE_PLATFORM = "codex"
-EOF
-  fi
-}
-
-ensure_codex_context_mode_hooks() {
-  ensure_directory "$(dirname "$CODEX_HOOKS_PATH")"
-
-  node - "$CODEX_HOOKS_PATH" <<'NODE'
-const fs = require('fs');
-
-const filePath = process.argv[2];
-
-const ensureEventGroup = (config, eventName, group, command) => {
-  const entries = Array.isArray(config.hooks[eventName]) ? config.hooks[eventName] : [];
-  const alreadyPresent = entries.some((entry) =>
-    Array.isArray(entry.hooks) && entry.hooks.some((hook) => hook.type === 'command' && hook.command === command)
-  );
-
-  if (!alreadyPresent) {
-    entries.push(group);
+    rm -rf "$temp_dir"
   }
 
-  config.hooks[eventName] = entries;
-};
+  main() {
+    ensure_git_host_config_include
 
-let config = { hooks: {} };
-
-if (fs.existsSync(filePath)) {
-  const raw = fs.readFileSync(filePath, 'utf8').trim();
-  if (raw) {
-    config = JSON.parse(raw);
-  }
-}
-
-if (!config.hooks || typeof config.hooks !== 'object') {
-  config.hooks = {};
-}
-
-ensureEventGroup(
-  config,
-  'PreToolUse',
-  {
-    matcher: 'local_shell|shell|shell_command|exec_command|Bash|Shell|apply_patch|Edit|Write|grep_files|ctx_execute|ctx_execute_file|ctx_batch_execute|ctx_fetch_and_index|ctx_search|ctx_index|mcp__',
-    hooks: [{ type: 'command', command: 'context-mode hook codex pretooluse' }],
-  },
-  'context-mode hook codex pretooluse'
-);
-ensureEventGroup(
-  config,
-  'PostToolUse',
-  {
-    matcher: '',
-    hooks: [{ type: 'command', command: 'context-mode hook codex posttooluse' }],
-  },
-  'context-mode hook codex posttooluse'
-);
-ensureEventGroup(
-  config,
-  'SessionStart',
-  {
-    matcher: '',
-    hooks: [{ type: 'command', command: 'context-mode hook codex sessionstart' }],
-  },
-  'context-mode hook codex sessionstart'
-);
-ensureEventGroup(
-  config,
-  'PreCompact',
-  {
-    matcher: '',
-    hooks: [{ type: 'command', command: 'context-mode hook codex precompact' }],
-  },
-  'context-mode hook codex precompact'
-);
-ensureEventGroup(
-  config,
-  'UserPromptSubmit',
-  {
-    hooks: [{ type: 'command', command: 'context-mode hook codex userpromptsubmit' }],
-  },
-  'context-mode hook codex userpromptsubmit'
-);
-ensureEventGroup(
-  config,
-  'Stop',
-  {
-    hooks: [{ type: 'command', command: 'context-mode hook codex stop' }],
-  },
-  'context-mode hook codex stop'
-);
-
-fs.writeFileSync(filePath, `${JSON.stringify(config, null, 2)}\n`);
-NODE
-}
-
-ensure_opencode_context_mode_plugin() {
-  ensure_directory "$(dirname "$OPENCODE_CONFIG_PATH")"
-
-  node - "$OPENCODE_CONFIG_PATH" <<'NODE'
-const fs = require('fs');
-
-const filePath = process.argv[2];
-
-const stripJsonComments = (input) => {
-  let output = '';
-  let inString = false;
-  let escaped = false;
-  let inLineComment = false;
-  let inBlockComment = false;
-
-  for (let index = 0; index < input.length; index += 1) {
-    const current = input[index];
-    const next = input[index + 1];
-
-    if (inLineComment) {
-      if (current === '\n') {
-        inLineComment = false;
-        output += current;
-      }
-      continue;
-    }
-
-    if (inBlockComment) {
-      if (current === '*' && next === '/') {
-        inBlockComment = false;
-        index += 1;
-      }
-      continue;
-    }
-
-    if (inString) {
-      output += current;
-      if (escaped) {
-        escaped = false;
-      } else if (current === '\\') {
-        escaped = true;
-      } else if (current === '"') {
-        inString = false;
-      }
-      continue;
-    }
-
-    if (current === '"') {
-      inString = true;
-      output += current;
-      continue;
-    }
-
-    if (current === '/' && next === '/') {
-      inLineComment = true;
-      index += 1;
-      continue;
-    }
-
-    if (current === '/' && next === '*') {
-      inBlockComment = true;
-      index += 1;
-      continue;
-    }
-
-    output += current;
-  }
-
-  return output;
-};
-
-let config = {};
-
-if (fs.existsSync(filePath)) {
-  const raw = fs.readFileSync(filePath, 'utf8').trim();
-  if (raw) {
-    config = JSON.parse(stripJsonComments(raw));
-  }
-}
-
-if (!config.$schema) {
-  config.$schema = 'https://opencode.ai/config.json';
-}
-
-if (!Array.isArray(config.plugin)) {
-  config.plugin = [];
-}
-
-if (!config.plugin.includes('context-mode')) {
-  config.plugin.push('context-mode');
-}
-
-if (config.mcp && Object.prototype.hasOwnProperty.call(config.mcp, 'context-mode')) {
-  delete config.mcp['context-mode'];
-  if (Object.keys(config.mcp).length === 0) {
-    delete config.mcp;
-  }
-}
-
-fs.writeFileSync(filePath, `${JSON.stringify(config, null, 2)}\n`);
-NODE
-}
-
-ensure_vscode_context_mode_mcp() {
-  ensure_directory "$(dirname "$VSCODE_REMOTE_MCP_PATH")"
-
-  node - "$VSCODE_REMOTE_MCP_PATH" <<'NODE'
-const fs = require('fs');
-
-const filePath = process.argv[2];
-
-let config = { servers: {} };
-
-if (fs.existsSync(filePath)) {
-  const raw = fs.readFileSync(filePath, 'utf8').trim();
-  if (raw) {
-    config = JSON.parse(raw);
-  }
-}
-
-if (!config.servers || typeof config.servers !== 'object') {
-  config.servers = {};
-}
-
-config.servers['context-mode'] = {
-  command: 'context-mode',
-};
-
-fs.writeFileSync(filePath, `${JSON.stringify(config, null, 2)}\n`);
-NODE
-}
-
-ensure_vscode_context_mode_hooks() {
-  ensure_directory "$(dirname "$CLAUDE_SETTINGS_PATH")"
-
-  node - "$CLAUDE_SETTINGS_PATH" <<'NODE'
-const fs = require('fs');
-
-const filePath = process.argv[2];
-
-const ensureEventGroup = (config, eventName, group, command) => {
-  const entries = Array.isArray(config.hooks[eventName]) ? config.hooks[eventName] : [];
-  const alreadyPresent = entries.some((entry) =>
-    Array.isArray(entry.hooks) && entry.hooks.some((hook) => hook.type === 'command' && hook.command === command)
-  );
-
-  if (!alreadyPresent) {
-    entries.push(group);
-  }
-
-  config.hooks[eventName] = entries;
-};
-
-let config = {};
-
-if (fs.existsSync(filePath)) {
-  const raw = fs.readFileSync(filePath, 'utf8').trim();
-  if (raw) {
-    config = JSON.parse(raw);
-  }
-}
-
-if (!config.hooks || typeof config.hooks !== 'object') {
-  config.hooks = {};
-}
-
-ensureEventGroup(
-  config,
-  'PreToolUse',
-  {
-    hooks: [{ type: 'command', command: 'context-mode hook vscode-copilot pretooluse' }],
-  },
-  'context-mode hook vscode-copilot pretooluse'
-);
-ensureEventGroup(
-  config,
-  'PostToolUse',
-  {
-    hooks: [{ type: 'command', command: 'context-mode hook vscode-copilot posttooluse' }],
-  },
-  'context-mode hook vscode-copilot posttooluse'
-);
-ensureEventGroup(
-  config,
-  'PreCompact',
-  {
-    hooks: [{ type: 'command', command: 'context-mode hook vscode-copilot precompact' }],
-  },
-  'context-mode hook vscode-copilot precompact'
-);
-ensureEventGroup(
-  config,
-  'SessionStart',
-  {
-    hooks: [{ type: 'command', command: 'context-mode hook vscode-copilot sessionstart' }],
-  },
-  'context-mode hook vscode-copilot sessionstart'
-);
-
-fs.writeFileSync(filePath, `${JSON.stringify(config, null, 2)}\n`);
-NODE
-}
-
-main() {
   dotnet tool update --global aspire.cli --version "$ASPIRE_VERSION" \
     || dotnet tool install --global aspire.cli --version "$ASPIRE_VERSION"
   dotnet tool update --global csharpier --version "$CSHARPIER_VERSION" \
@@ -511,14 +244,6 @@ main() {
     "@biomejs/biome@$BIOME_VERSION" \
     "skills@$SKILLS_VERSION"
 
-  run_optional_step "Global skills installation" install_global_skills
-
-  ensure_codex_context_mode_config
-  run_optional_step "Codex Context Mode hooks wiring" ensure_codex_context_mode_hooks
-  run_optional_step "OpenCode Context Mode plugin wiring" ensure_opencode_context_mode_plugin
-  run_optional_step "VS Code Context Mode MCP wiring" ensure_vscode_context_mode_mcp
-  run_optional_step "VS Code Context Mode hooks wiring" ensure_vscode_context_mode_hooks
-
   docker --version
   node --version
   pnpm --version
@@ -526,21 +251,25 @@ main() {
   copilot --version
   opencode --version
   codex --version
-  run_optional_step "Context Mode diagnostics" context-mode doctor
+  context-mode doctor
   gitnexus --version
   gitnexus doctor
   gh --version
-  markdownlint-cli2 --help >/dev/null
+  markdownlint-cli2 --version >/dev/null
   command -v csharpier >/dev/null
   csharpier --version
   biome --version
-  test -f "$CODEX_CONFIG_PATH"
-  test -f "$CODEX_HOOKS_PATH"
-  run_optional_step "OpenCode config presence check" test -f "$OPENCODE_CONFIG_PATH"
-  run_optional_step "VS Code MCP config presence check" test -f "$VSCODE_REMOTE_MCP_PATH"
-  run_optional_step "VS Code hooks config presence check" test -f "$CLAUDE_SETTINGS_PATH"
   skills --version
-  run_optional_step "Global skills listing" run_skills_global_command ls --global --json >/dev/null
+
+  cat <<'EOF'
+
+Base Dev Container bootstrap finished.
+Host Git config include path:
+  /home/vscode/.gitconfig-host
+Optional host-level agent setup now lives in:
+  bash .devcontainer/post-create-host-setup.sh
+Run it manually after attach if you want global skills installation and Context Mode host wiring.
+EOF
 }
 
 main "$@"
