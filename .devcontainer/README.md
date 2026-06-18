@@ -112,6 +112,9 @@ paths that are invalid on Linux.
 * Context Mode CLI `1.0.162`
 * GitNexus CLI `1.6.7`
 * GitHub CLI `2.95.0`
+* Gentle AI CLI `1.40.2`
+* Engram CLI `1.16.3`
+* GGA CLI `2.8.1`
 * markdownlint-cli2 `0.22.1`
 * CSharpier `1.3.0`
 * Biome `2.5.0`
@@ -176,6 +179,92 @@ lockfile to `~/.agents/.skill-lock.json`.
 The command was validated to detect the installed agents non-interactively
 and install the skills for Codex, GitHub Copilot, and OpenCode.
 
+## Gentle AI, Engram, and GGA
+
+The base bootstrap now installs the pinned standalone binaries for
+`gentle-ai`, `engram`, and `gga`.
+That keeps the container-level bootstrap reproducible while still avoiding the
+more invasive ecosystem application steps that write agent configs, project
+hooks, or provider-specific runtime state.
+
+`gentle-ai` was validated on Linux as a versioned upstream tarball release.
+The current bootstrap pins `1.40.2` and installs the standalone binary into
+`/usr/local/bin`.
+
+`engram` was validated on Linux as a versioned upstream tarball release.
+The current bootstrap pins `1.16.3` and installs the standalone binary into
+`/usr/local/bin`.
+
+`gga` does not publish release binaries for Linux. The current bootstrap pins
+`2.8.1`, downloads the tagged source archive, installs the CLI script and its
+runtime helper libraries under `/usr/local/lib/gga`, patches the pinned version
+and runtime library path exactly as the upstream installer does, and exposes the
+command at `/usr/local/bin/gga`.
+
+The verification command for the base bootstrap is:
+
+```bash
+gentle-ai version
+engram version
+gga version
+```
+
+`gentle-ai doctor` is intentionally not part of the base bootstrap validation.
+It fails on a fresh environment until companion tools such as `engram` and
+`gga` exist on `PATH` and until initial Gentle AI state has been created.
+
+The actual ecosystem application remains manual for now. `gentle-ai install`
+can run non-interactively when all flags are provided, but even the minimal
+preset writes agent files into the current repository and user-home state under
+`~/.gentle-ai`, `~/.local/bin`, and agent-specific config directories.
+That behavior is appropriate for an explicit setup step, not for the generic
+container bootstrap.
+
+`gga` is still treated as an independent CLI. Installing the binary in the
+container does not initialize any repository or install any git hook. Those
+steps remain explicit and manual with `gga init` and `gga install` in the repo
+that should actually use commit-time review.
+
+When you want to activate the full Gentle AI stack manually inside this
+container, use this sequence in a fresh terminal:
+
+```bash
+gentle-ai version
+gentle-ai install --agent codex --preset minimal --scope workspace
+```
+
+If you want to activate GGA inside this repo after the binary is present:
+
+```bash
+gga version
+gga init
+gga install
+```
+
+Engram project identity for this repository is pinned through the checked-in
+`/.engram/config.json` file:
+
+```json
+{
+   "project_name": "talby-factory"
+}
+```
+
+This file is enough for repository-scoped default project resolution. No extra
+repository structure is required beyond the `.engram/` directory that contains
+that config file.
+
+The expected verification flow for Engram inside the container is:
+
+```bash
+engram version
+engram mcp --tools=agent
+```
+
+Then, from an agent session started in this repo, call `mem_current_project`.
+The expected project is `talby-factory`, sourced from repo config rather than a
+directory-basename fallback.
+
 ## Files
 
 * [devcontainer.json](./devcontainer.json) defines the container image,
@@ -238,6 +327,9 @@ context-mode doctor
 gitnexus --version
 gitnexus doctor
 gh --version
+gentle-ai version
+engram version
+gga version
 markdownlint-cli2 --version
 csharpier --version
 biome --version

@@ -115,33 +115,62 @@ Resultado validado de Task 4:
 - La documentación quedó actualizada en `/.devcontainer/README.md` sin persistir secretos en el repo y dejando `GH_TOKEN` como alternativa opcional de sesión dentro del contenedor.
 
 **Task 5: `gentle-ai` CLI**
-- [ ] Identificar el canal oficial de instalación para Linux y su forma correcta de pinnear versión.
-- [ ] Confirmar si `gentle-ai` puede instalarse de forma no interactiva en /.devcontainer/post-create.sh.
-- [ ] Determinar si requiere también `gga` como dependencia separada o integrada.
-- [ ] Definir el comando de verificación real de `gentle-ai`.
-- [ ] Confirmar si necesita variables de entorno, login, tokens o archivos de configuración locales.
-- [ ] Diseñar la instalación para no dejar el bootstrap frágil si la auth no está disponible durante creación del contenedor.
-- [ ] Documentar claramente qué parte queda instalada y qué parte requiere setup manual posterior.
-- [ ] Validar que el CLI arranca en terminal del contenedor sin errores básicos.
+ [x] Identificar el canal oficial de instalación para Linux y su forma correcta de pinnear versión.
+ [x] Confirmar si `gentle-ai` puede instalarse de forma no interactiva en /.devcontainer/post-create.sh.
+ [x] Determinar si requiere también `gga` como dependencia separada o integrada.
+ [x] Definir el comando de verificación real de `gentle-ai`.
+ [x] Confirmar si necesita variables de entorno, login, tokens o archivos de configuración locales.
+ [x] Diseñar la instalación para no dejar el bootstrap frágil si la auth no está disponible durante creación del contenedor.
+ [x] Documentar claramente qué parte queda instalada y qué parte requiere setup manual posterior.
+ [x] Validar que el CLI arranca en terminal del contenedor sin errores básicos.
+
+ Resultado validado de Task 5:
+
+ - `gentle-ai` publica releases oficiales con tarballs Linux versionados por arquitectura. Para este repo se descartó depender de Homebrew como canal primario porque el contenedor ya viene siguiendo el patrón de descargar assets oficiales pinneados desde GitHub Releases.
+ - La versión fijada en el bootstrap quedó en `1.40.2` y se instala desde `gentle-ai_1.40.2_linux_<arch>.tar.gz` hacia `/usr/local/bin/gentle-ai`.
+ - El binario arranca sin login ni variables de entorno obligatorias para responder `gentle-ai version`; esa es la verificación barata y estable adoptada para `/.devcontainer/post-create.sh`.
+ - `gentle-ai doctor` no se adoptó como probe de bootstrap porque en un entorno fresco marca fallo hasta que existan además `engram`, `gga` y estado inicial bajo `~/.gentle-ai/`.
+ - `gentle-ai install` sí soporta ejecución no interactiva cuando se le pasan flags explícitos. La validación real con `--agent codex --preset minimal --scope workspace` terminó sin prompts, pero escribió archivos de agente en el repo y estado de usuario en `~/.gentle-ai`, `~/.local/bin` y `~/.codex`.
+ - Por esa razón, la decisión final de este repo es instalar automáticamente solo el binario `gentle-ai` en el bootstrap base y dejar la aplicación de presets/componentes como paso manual posterior documentado.
+ - `gga` no viene embebido en el tarball de `gentle-ai`; es una herramienta separada del ecosistema y se trata como task aparte.
 
 **Task 6: Engram para `gentle-ai`**
-- [ ] Confirmar si Engram requiere archivo de proyecto para resolver correctamente este repo.
-- [ ] Si aplica, definir el contenido y la ubicación de /.engram/config.json.
-- [ ] Asegurar que la configuración de proyecto evita fallback a un proyecto incorrecto.
-- [ ] Confirmar si hace falta crear estructura adicional o solo el archivo de config.
-- [ ] Definir cómo verificar que la resolución de proyecto es correcta dentro del contenedor.
-- [ ] Documentar el comportamiento esperado y cualquier prerequisito externo.
-- [ ] No avanzar a cerrar esta tarea hasta comprobar que la identidad del proyecto es estable.
+ [x] Confirmar si Engram requiere archivo de proyecto para resolver correctamente este repo.
+ [x] Si aplica, definir el contenido y la ubicación de /.engram/config.json.
+ [x] Asegurar que la configuración de proyecto evita fallback a un proyecto incorrecto.
+ [x] Confirmar si hace falta crear estructura adicional o solo el archivo de config.
+ [x] Definir cómo verificar que la resolución de proyecto es correcta dentro del contenedor.
+ [x] Documentar el comportamiento esperado y cualquier prerequisito externo.
+ [x] No avanzar a cerrar esta tarea hasta comprobar que la identidad del proyecto es estable.
 
+ Resultado validado de Task 6:
+
+ - La documentación oficial de Engram recomienda `/.engram/config.json` para repos críticos o monorepos cuando se quiere resolución determinística del proyecto. Sin ese archivo, Engram puede caer a heurísticas de cwd, repo name o basename del directorio.
+ - La decisión final para este repo es versionar `/.engram/config.json` con `{"project_name": "talby-factory"}`.
+ - No hizo falta estructura adicional de proyecto dentro del repo: alcanzó con crear la carpeta `/.engram/` y ese archivo de config.
+ - La guía oficial indica que el primer chequeo operativo debe ser `mem_current_project`; ese llamado debe devolver `talby-factory` y reportar origen desde repo config en vez de un fallback de basename.
+- Como validación técnica previa, se confirmó además que Engram publica binarios Linux versionados y que la CLI expone `engram version`, `engram mcp --tools=agent` y `engram doctor`.
+- La decisión final del repo quedó actualizada: además del archivo `/.engram/config.json`, el bootstrap base instala también el binario independiente de `engram` pinneado en versión `1.16.3`.
+- La expectativa documentada para este contenedor es: `engram version`, arranque del MCP con `engram mcp --tools=agent`, y luego `mem_current_project` desde una sesión iniciada en este repo.
 **Task 7: `gga` para agentes instalados**
-- [ ] Confirmar qué es exactamente `gga` en este contexto y su canal oficial de instalación.
-- [ ] Verificar si es una CLI independiente o parte del ecosistema de `gentle-ai`.
-- [ ] Definir si debe instalarse globalmente en el contenedor o configurarse por agente/workspace.
-- [ ] Si requiere archivos persistentes, decidir si viven en /.github o si dependen de estado de usuario.
-- [ ] Definir el comando de verificación real.
-- [ ] Documentar limitaciones, auth y dependencias cruzadas con `gentle-ai`.
-- [ ] Validar que la instalación/configuración no interfiera con el resto de agentes ya instalados en el contenedor.
+ [x] Confirmar qué es exactamente `gga` en este contexto y su canal oficial de instalación.
+ [x] Verificar si es una CLI independiente o parte del ecosistema de `gentle-ai`.
+ [x] Definir si debe instalarse globalmente en el contenedor o configurarse por agente/workspace.
+ [x] Si requiere archivos persistentes, decidir si viven en /.github o si dependen de estado de usuario.
+ [x] Definir el comando de verificación real.
+ [x] Documentar limitaciones, auth y dependencias cruzadas con `gentle-ai`.
+ [x] Validar que la instalación/configuración no interfiera con el resto de agentes ya instalados en el contenedor.
 
+ Resultado validado de Task 7:
+
+ - `gga` es `Gentleman Guardian Angel`, una CLI separada orientada a code review con hooks de git. No viene incluida como binario dentro del release tarball de `gentle-ai`, aunque `gentle-ai` la reconoce como componente gestionable del ecosistema.
+ - Su documentación oficial declara dos canales de instalación: Homebrew (`brew install gentleman-programming/tap/gga`) y el instalador del repo (`./install.sh`). La inspección de releases confirmó que no publica assets binarios Linux, así que para Linux la vía real fuera de Homebrew sigue siendo el script.
+ - La ejecución aislada de `install.sh` fue no interactiva cuando `gga` no estaba previamente instalado y escribió solo en estado de usuario: `~/.local/bin/gga` y `~/.local/share/gga/lib/**`.
+ - La verificación real quedó confirmada con ambos comandos: `gga version` y `gga --version`, que devolvieron `gga v2.8.1`.
+ - La configuración operativa posterior es por workspace: `gga init` crea el archivo `.gga` en el repo elegido y `gga install` agrega el hook de git en ese repo. Por diseño, eso no corresponde al bootstrap base del contenedor.
+- La decisión final del repo quedó actualizada: sí se auto-instala el binario independiente de `gga` desde `/.devcontainer/post-create.sh`, pero sin ejecutar `gga init` ni `gga install`. El bootstrap baja el source archive taggeado `v2.8.1`, instala el script y sus librerías de runtime en `/usr/local/lib/gga`, y expone `gga` en `/usr/local/bin`.
+- Sigue quedando manual y explícita la activación por workspace de hooks de review, evitando tocar hooks o estado de revisión sin consentimiento durante creación del contenedor.
+ - No se detectaron requisitos de login o tokens para instalar o consultar versión. Los secretos potenciales dependen del proveedor de IA que después se configure dentro del archivo `.gga`, así que permanecen fuera del repo.
 **Task 8: `markdownlint-cli2`**
 - [x] Confirmar el paquete oficial exacto y su instalación global reproducible.
 - [x] Fijar versión y sumarla a /.devcontainer/post-create.sh.

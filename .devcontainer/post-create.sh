@@ -18,11 +18,17 @@ readonly CODEX_VERSION="0.140.0"
 readonly CONTEXT_MODE_VERSION="1.0.162"
 readonly GITNEXUS_VERSION="1.6.7"
 readonly GH_VERSION="2.95.0"
+readonly GENTLE_AI_VERSION="1.40.2"
+readonly ENGRAM_VERSION="1.16.3"
+readonly GGA_VERSION="2.8.1"
 readonly MARKDOWNLINT_CLI2_VERSION="0.22.1"
 readonly CSHARPIER_VERSION="1.3.0"
 readonly BIOME_VERSION="2.5.0"
 readonly SKILLS_VERSION="1.5.11"
 readonly GH_INSTALL_ROOT="/usr/local/lib/gh-cli"
+readonly GENTLE_AI_INSTALL_ROOT="/usr/local/lib/gentle-ai"
+readonly ENGRAM_INSTALL_ROOT="/usr/local/lib/engram"
+readonly GGA_INSTALL_ROOT="/usr/local/lib/gga"
 readonly HOST_GITCONFIG_PATH="/home/vscode/.gitconfig-host"
 readonly SANITIZED_HOST_GITCONFIG_PATH="/home/vscode/.config/git/host-identity.inc"
 readonly ALLOWED_SIGNERS_PATH="/home/vscode/.config/git/allowed_signers"
@@ -206,7 +212,6 @@ install_gh_cli() {
   asset_name="gh_${GH_VERSION}_linux_${architecture}.tar.gz"
   download_url="https://github.com/cli/cli/releases/download/v${GH_VERSION}/${asset_name}"
   temp_dir="$(mktemp -d)"
-  trap 'cleanup_path "$temp_dir"' RETURN
 
   curl --fail --silent --show-error --location \
     --retry 5 \
@@ -219,6 +224,116 @@ install_gh_cli() {
     --strip-components=1 \
     -C "$GH_INSTALL_ROOT"
   sudo install -m 0755 "$GH_INSTALL_ROOT/bin/gh" /usr/local/bin/gh
+  cleanup_path "$temp_dir"
+}
+
+install_gentle_ai_cli() {
+  local architecture
+  local asset_name
+  local download_url
+  local extracted_dir
+  local temp_dir
+
+  architecture="$(dpkg --print-architecture)"
+
+  case "$architecture" in
+    amd64 | arm64)
+      ;;
+    *)
+      echo "Unsupported architecture for gentle-ai: $architecture" >&2
+      return 1
+      ;;
+  esac
+
+  asset_name="gentle-ai_${GENTLE_AI_VERSION}_linux_${architecture}.tar.gz"
+  download_url="https://github.com/Gentleman-Programming/gentle-ai/releases/download/v${GENTLE_AI_VERSION}/${asset_name}"
+  temp_dir="$(mktemp -d)"
+
+  curl --fail --silent --show-error --location \
+    --retry 5 \
+    --retry-all-errors \
+    --retry-delay 2 \
+    "$download_url" -o "$temp_dir/$asset_name"
+
+  extracted_dir="$temp_dir/extracted"
+  mkdir -p "$extracted_dir"
+  tar -xzf "$temp_dir/$asset_name" -C "$extracted_dir"
+
+  sudo rm -rf "$GENTLE_AI_INSTALL_ROOT"
+  sudo mkdir -p "$GENTLE_AI_INSTALL_ROOT"
+  sudo install -m 0755 "$extracted_dir/gentle-ai" "$GENTLE_AI_INSTALL_ROOT/gentle-ai"
+  sudo install -m 0755 "$extracted_dir/gentle-ai" /usr/local/bin/gentle-ai
+  cleanup_path "$temp_dir"
+}
+
+install_engram_cli() {
+  local architecture
+  local asset_name
+  local download_url
+  local extracted_dir
+  local temp_dir
+
+  architecture="$(dpkg --print-architecture)"
+
+  case "$architecture" in
+    amd64 | arm64)
+      ;;
+    *)
+      echo "Unsupported architecture for engram: $architecture" >&2
+      return 1
+      ;;
+  esac
+
+  asset_name="engram_${ENGRAM_VERSION}_linux_${architecture}.tar.gz"
+  download_url="https://github.com/Gentleman-Programming/engram/releases/download/v${ENGRAM_VERSION}/${asset_name}"
+  temp_dir="$(mktemp -d)"
+
+  curl --fail --silent --show-error --location \
+    --retry 5 \
+    --retry-all-errors \
+    --retry-delay 2 \
+    "$download_url" -o "$temp_dir/$asset_name"
+
+  extracted_dir="$temp_dir/extracted"
+  mkdir -p "$extracted_dir"
+  tar -xzf "$temp_dir/$asset_name" -C "$extracted_dir"
+
+  sudo rm -rf "$ENGRAM_INSTALL_ROOT"
+  sudo mkdir -p "$ENGRAM_INSTALL_ROOT"
+  sudo install -m 0755 "$extracted_dir/engram" "$ENGRAM_INSTALL_ROOT/engram"
+  sudo install -m 0755 "$extracted_dir/engram" /usr/local/bin/engram
+  cleanup_path "$temp_dir"
+}
+
+install_gga_cli() {
+  local archive_name
+  local download_url
+  local extracted_dir
+  local temp_dir
+
+  archive_name="v${GGA_VERSION}.tar.gz"
+  download_url="https://github.com/Gentleman-Programming/gentleman-guardian-angel/archive/refs/tags/${archive_name}"
+  temp_dir="$(mktemp -d)"
+
+  curl --fail --silent --show-error --location \
+    --retry 5 \
+    --retry-all-errors \
+    --retry-delay 2 \
+    "$download_url" -o "$temp_dir/$archive_name"
+
+  tar -xzf "$temp_dir/$archive_name" -C "$temp_dir"
+  extracted_dir="$temp_dir/gentleman-guardian-angel-${GGA_VERSION}"
+
+  sudo rm -rf "$GGA_INSTALL_ROOT"
+  sudo mkdir -p "$GGA_INSTALL_ROOT/bin" "$GGA_INSTALL_ROOT/lib"
+  sudo install -m 0755 "$extracted_dir/bin/gga" "$GGA_INSTALL_ROOT/bin/gga"
+  sudo install -m 0755 "$extracted_dir/lib/providers.sh" "$GGA_INSTALL_ROOT/lib/providers.sh"
+  sudo install -m 0755 "$extracted_dir/lib/cache.sh" "$GGA_INSTALL_ROOT/lib/cache.sh"
+  sudo install -m 0755 "$extracted_dir/lib/pr_mode.sh" "$GGA_INSTALL_ROOT/lib/pr_mode.sh"
+  sudo sed -i 's|^VERSION="${GGA_VERSION:-dev}"$|VERSION="'"$GGA_VERSION"'"|' "$GGA_INSTALL_ROOT/bin/gga"
+  sudo sed -i "s|LIB_DIR=.*|LIB_DIR=\"$GGA_INSTALL_ROOT/lib\"|" "$GGA_INSTALL_ROOT/bin/gga"
+  sudo install -m 0755 "$GGA_INSTALL_ROOT/bin/gga" /usr/local/bin/gga
+  cleanup_path "$temp_dir"
 }
 
 install_dotnet_tools() {
@@ -252,6 +367,9 @@ verify_base_bootstrap() {
   gitnexus --version
   gitnexus doctor
   gh --version
+  gentle-ai version
+  engram version
+  gga version
   markdownlint-cli2 --version >/dev/null
   command -v csharpier >/dev/null
   csharpier --version
@@ -275,6 +393,9 @@ main() {
   ensure_git_host_config_include
   install_dotnet_tools
   install_gh_cli
+  install_gentle_ai_cli
+  install_engram_cli
+  install_gga_cli
   install_node_tools
   verify_base_bootstrap
   print_base_bootstrap_summary
