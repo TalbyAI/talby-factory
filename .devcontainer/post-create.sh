@@ -13,6 +13,7 @@ readonly OPENCODE_VERSION="1.17.7"
 readonly CODEX_VERSION="0.140.0"
 readonly CONTEXT_MODE_VERSION="1.0.162"
 readonly GITNEXUS_VERSION="1.6.7"
+readonly GH_VERSION="2.95.0"
 readonly MARKDOWNLINT_CLI2_VERSION="0.22.1"
 readonly CSHARPIER_VERSION="1.3.0"
 readonly BIOME_VERSION="2.5.0"
@@ -23,6 +24,7 @@ readonly CODEX_HOOKS_PATH="/home/vscode/.codex/hooks.json"
 readonly OPENCODE_CONFIG_PATH="/home/vscode/.config/opencode/opencode.jsonc"
 readonly CLAUDE_SETTINGS_PATH="/home/vscode/.claude/settings.json"
 readonly VSCODE_REMOTE_MCP_PATH="/home/vscode/.vscode-server/data/Machine/mcp.json"
+readonly GH_INSTALL_ROOT="/usr/local/lib/gh-cli"
 
 ensure_directory() {
   local path="$1"
@@ -46,6 +48,38 @@ run_skills_global_command() {
 install_global_skills() {
   run_skills_global_command add mattpocock/skills --global --yes \
     --agent "${SKILLS_TARGET_AGENTS[@]}"
+}
+
+install_gh_cli() {
+  local architecture
+  local asset_name
+  local download_url
+  local temp_dir
+
+  architecture="$(dpkg --print-architecture)"
+
+  case "$architecture" in
+    amd64 | arm64)
+      ;;
+    *)
+      echo "Unsupported architecture for GitHub CLI: $architecture" >&2
+      return 1
+      ;;
+  esac
+
+  asset_name="gh_${GH_VERSION}_linux_${architecture}.tar.gz"
+  download_url="https://github.com/cli/cli/releases/download/v${GH_VERSION}/${asset_name}"
+  temp_dir="$(mktemp -d)"
+
+  curl -fsSL "$download_url" -o "$temp_dir/$asset_name"
+  sudo rm -rf "$GH_INSTALL_ROOT"
+  sudo mkdir -p "$GH_INSTALL_ROOT"
+  sudo tar -xzf "$temp_dir/$asset_name" \
+    --strip-components=1 \
+    -C "$GH_INSTALL_ROOT"
+  sudo install -m 0755 "$GH_INSTALL_ROOT/bin/gh" /usr/local/bin/gh
+
+  rm -rf "$temp_dir"
 }
 
 ensure_codex_context_mode_config() {
@@ -446,6 +480,8 @@ main() {
   dotnet tool update --global csharpier --version "$CSHARPIER_VERSION" \
     || dotnet tool install --global csharpier --version "$CSHARPIER_VERSION"
 
+  install_gh_cli
+
   npm install -g \
     "@github/copilot@$COPILOT_VERSION" \
     "opencode-ai@$OPENCODE_VERSION" \
@@ -474,6 +510,7 @@ main() {
   context-mode doctor
   gitnexus --version
   gitnexus doctor
+  gh --version
   markdownlint-cli2 --help >/dev/null
   command -v csharpier >/dev/null
   csharpier --version

@@ -22,6 +22,7 @@ post-create bootstrap script.
 * Codex CLI `0.140.0`
 * Context Mode CLI `1.0.162`
 * GitNexus CLI `1.6.7`
+* GitHub CLI `2.95.0`
 * markdownlint-cli2 `0.22.1`
 * CSharpier `1.3.0`
 * Biome `2.5.0`
@@ -93,6 +94,7 @@ codex --version
 context-mode doctor
 gitnexus --version
 gitnexus doctor
+gh --version
 markdownlint-cli2 --help | head -n 2
 csharpier --version
 biome --version
@@ -133,6 +135,22 @@ GitNexus is installed globally with `npm install -g gitnexus@1.6.7`.
 The bootstrap uses `gitnexus --version` as the fast availability probe and
 `gitnexus doctor` as the runtime smoke test for the `vscode` user inside the
 container.
+
+GitHub CLI is installed from the official pinned release asset instead of the
+mutable apt repository channel. The bootstrap downloads
+`gh_2.95.0_linux_<arch>.tar.gz` from `github.com/cli/cli/releases`, extracts it
+into `/usr/local/lib/gh-cli`, and installs the `gh` binary into
+`/usr/local/bin/gh`.
+`gh --version` is the bootstrap verification probe because it is auth-neutral
+and confirms the binary is available on the effective container `PATH`.
+
+Minimal usage and verification:
+
+```bash
+gh --version
+gh auth status
+gh repo view
+```
 
 `markdownlint-cli2` is installed globally with
 `npm install -g markdownlint-cli2@0.22.1`.
@@ -193,6 +211,19 @@ analyze`. Optional authenticated flows remain manual: `gitnexus publish` needs
 `UNDERSTAND_QUICKLY_TOKEN`, and LLM-backed `gitnexus wiki` setup may persist a
 provider API key under `~/.gitnexus/config.json` the first time you enable it.
 Those secrets stay outside the repository.
+
+GitHub CLI also stays non-interactive during bootstrap. Installation and
+`gh --version` do not require login, but any repository or API operation does.
+The manual sign-in flow stays outside the repo:
+
+```bash
+gh auth login
+gh auth setup-git
+gh auth status
+```
+
+If you prefer token-based auth in a throwaway session, export `GH_TOKEN` inside
+the container instead of storing credentials in repository files.
 
 `markdownlint-cli2`, `csharpier`, and `biome` do not require login, tokens, or
 environment variables for installation or for the local verification commands

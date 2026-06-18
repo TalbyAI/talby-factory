@@ -96,14 +96,23 @@ Resultado validado de Task 3:
 - La rerun completa de `/.devcontainer/post-create.sh` terminó sin error después de sumar GitNexus. El bootstrap volvió a instalar y verificar todas las herramientas esperadas, y `gitnexus --version` junto con `gitnexus doctor` pasaron dentro de la misma ejecución.
 
 **Task 4: `gh` CLI**
-- [ ] Identificar el canal oficial de instalación para Linux y la estrategia correcta para fijar versión.
-- [ ] Confirmar si conviene instalar GitHub CLI desde repositorio apt oficial, paquete descargable o binario standalone para este contenedor.
-- [ ] Definir si `gh` debe quedar instalado desde /.devcontainer/post-create.sh o si requiere otro punto de bootstrap.
-- [ ] Añadir el comando de verificación real para `gh` al criterio de validación de la tarea.
-- [ ] Confirmar si requiere autenticación, token o setup manual posterior para que el bootstrap siga siendo no interactivo.
-- [ ] Documentar el flujo manual de `gh auth login` o alternativa equivalente sin persistir secretos en el repo.
-- [ ] Verificar compatibilidad con el usuario remoto `vscode` y el `PATH` efectivo del contenedor.
-- [ ] Repetir bootstrap o rerun acotado para comprobar que la instalación es estable e idempotente.
+- [x] Identificar el canal oficial de instalación para Linux y la estrategia correcta para fijar versión.
+- [x] Confirmar si conviene instalar GitHub CLI desde repositorio apt oficial, paquete descargable o binario standalone para este contenedor.
+- [x] Definir si `gh` debe quedar instalado desde /.devcontainer/post-create.sh o si requiere otro punto de bootstrap.
+- [x] Añadir el comando de verificación real para `gh` al criterio de validación de la tarea.
+- [x] Confirmar si requiere autenticación, token o setup manual posterior para que el bootstrap siga siendo no interactivo.
+- [x] Documentar el flujo manual de `gh auth login` o alternativa equivalente sin persistir secretos en el repo.
+- [x] Verificar compatibilidad con el usuario remoto `vscode` y el `PATH` efectivo del contenedor.
+- [x] Repetir bootstrap o rerun acotado para comprobar que la instalación es estable e idempotente.
+
+Resultado validado de Task 4:
+
+- La distribución oficial de GitHub CLI publica assets Linux versionados por release (`gh_<version>_linux_<arch>.tar.gz`, `.deb` y `.rpm`). Para este repo se descartó el repositorio apt oficial porque expone un canal mutable que no encaja con el patrón actual de versiones pinneadas en `/.devcontainer/post-create.sh`.
+- La decisión final fue instalar `gh` desde `/.devcontainer/post-create.sh` usando el release oficial pinneado `2.95.0`, descargado desde `github.com/cli/cli/releases` y desplegado en `/usr/local/bin/gh` mediante `sudo`, sin agregar repositorios del sistema.
+- La verificación automática adoptada para el bootstrap es `gh --version`, porque confirma disponibilidad del binario en el `PATH` efectivo del contenedor y no depende de auth previa.
+- La validación de entorno confirmó que el contenedor corre con `remoteUser: vscode`, tiene `sudo` no interactivo disponible y resuelve arquitectura `amd64`, por lo que el asset real usado es `gh_2.95.0_linux_amd64.tar.gz`.
+- `gh` no requiere login para instalarse ni para responder `gh --version`, pero el uso real contra GitHub queda manual y explícito en la guía del contenedor con `gh auth login`, `gh auth setup-git` y `gh auth status`.
+- La documentación quedó actualizada en `/.devcontainer/README.md` sin persistir secretos en el repo y dejando `GH_TOKEN` como alternativa opcional de sesión dentro del contenedor.
 
 **Task 5: `gentle-ai` CLI**
 - [ ] Identificar el canal oficial de instalación para Linux y su forma correcta de pinnear versión.
