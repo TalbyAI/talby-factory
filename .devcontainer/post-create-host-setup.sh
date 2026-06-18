@@ -26,7 +26,7 @@ run_skills_global_command() {
   local temp_dir
 
   temp_dir="$(mktemp -d)"
-  trap 'cleanup_path "$temp_dir"' RETURN
+  trap "cleanup_path '$temp_dir'" RETURN
 
   (
     cd "$temp_dir"
