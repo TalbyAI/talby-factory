@@ -32,6 +32,21 @@ ensure_directory() {
   mkdir -p "$path"
 }
 
+warn() {
+  local message="$1"
+
+  printf 'WARNING: %s\n' "$message" >&2
+}
+
+run_optional_step() {
+  local description="$1"
+  shift
+
+  if ! "$@"; then
+    warn "$description failed during container bootstrap; rerun 'bash .devcontainer/post-create.sh' after attach if you still need that setup."
+  fi
+}
+
 run_skills_global_command() {
   local temp_dir
 
@@ -71,7 +86,11 @@ install_gh_cli() {
   download_url="https://github.com/cli/cli/releases/download/v${GH_VERSION}/${asset_name}"
   temp_dir="$(mktemp -d)"
 
-  curl -fsSL "$download_url" -o "$temp_dir/$asset_name"
+  curl --fail --silent --show-error --location \
+    --retry 5 \
+    --retry-all-errors \
+    --retry-delay 2 \
+    "$download_url" -o "$temp_dir/$asset_name"
   sudo rm -rf "$GH_INSTALL_ROOT"
   sudo mkdir -p "$GH_INSTALL_ROOT"
   sudo tar -xzf "$temp_dir/$asset_name" \
@@ -492,13 +511,13 @@ main() {
     "@biomejs/biome@$BIOME_VERSION" \
     "skills@$SKILLS_VERSION"
 
-  install_global_skills
+  run_optional_step "Global skills installation" install_global_skills
 
   ensure_codex_context_mode_config
-  ensure_codex_context_mode_hooks
-  ensure_opencode_context_mode_plugin
-  ensure_vscode_context_mode_mcp
-  ensure_vscode_context_mode_hooks
+  run_optional_step "Codex Context Mode hooks wiring" ensure_codex_context_mode_hooks
+  run_optional_step "OpenCode Context Mode plugin wiring" ensure_opencode_context_mode_plugin
+  run_optional_step "VS Code Context Mode MCP wiring" ensure_vscode_context_mode_mcp
+  run_optional_step "VS Code Context Mode hooks wiring" ensure_vscode_context_mode_hooks
 
   docker --version
   node --version
@@ -507,7 +526,7 @@ main() {
   copilot --version
   opencode --version
   codex --version
-  context-mode doctor
+  run_optional_step "Context Mode diagnostics" context-mode doctor
   gitnexus --version
   gitnexus doctor
   gh --version
@@ -517,11 +536,11 @@ main() {
   biome --version
   test -f "$CODEX_CONFIG_PATH"
   test -f "$CODEX_HOOKS_PATH"
-  test -f "$OPENCODE_CONFIG_PATH"
-  test -f "$VSCODE_REMOTE_MCP_PATH"
-  test -f "$CLAUDE_SETTINGS_PATH"
+  run_optional_step "OpenCode config presence check" test -f "$OPENCODE_CONFIG_PATH"
+  run_optional_step "VS Code MCP config presence check" test -f "$VSCODE_REMOTE_MCP_PATH"
+  run_optional_step "VS Code hooks config presence check" test -f "$CLAUDE_SETTINGS_PATH"
   skills --version
-  run_skills_global_command ls --global --json >/dev/null
+  run_optional_step "Global skills listing" run_skills_global_command ls --global --json >/dev/null
 }
 
 main "$@"
