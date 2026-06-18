@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 #
 # post-create-host-setup.sh
-# Applies optional global agent host personalization for the talby-factory DevContainer.
+# Applies the second automatic post-create phase for user-level agent personalization.
 
 set -euo pipefail
 

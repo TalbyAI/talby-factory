@@ -120,25 +120,25 @@ paths that are invalid on Linux.
 * Biome `2.5.0`
 * Skills CLI `1.5.11`
 
-## Optional Host-Level Agent Setup
+## Post-Create Flow
 
-The Dev Container now separates base container bootstrap from optional
-user-level agent host personalization:
+The Dev Container keeps the bootstrap split into two scripts for easier
+maintenance, but both now run automatically from `postCreateCommand` during
+container creation and rebuild:
 
-* `postCreateCommand` runs `bash .devcontainer/post-create.sh`
-* optional host setup runs manually with
-   `bash .devcontainer/post-create-host-setup.sh`
+* `bash .devcontainer/post-create.sh`
+* `bash .devcontainer/post-create-host-setup.sh`
 
 The base bootstrap installs the pinned CLIs and verifies they are available in
-the container. The optional script applies global `skills` installation and
-Context Mode host wiring for the current `vscode` user.
+the container. The host setup script then applies global `skills`
+installation and Context Mode host wiring for the current `vscode` user.
 
-Run the optional script only when you want this container instance to also own
-global agent personalization state under the user home directory.
+You can still rerun either script manually when you want to troubleshoot or
+reapply only one phase.
 
 ## Global Context Mode Host Wiring
 
-The optional host setup script bootstraps global `context-mode` host integration
+The host setup script bootstraps global `context-mode` host integration
 for the three agent hosts already installed in the container:
 
 * Codex CLI via `~/.codex/config.toml` and `~/.codex/hooks.json`
@@ -156,7 +156,7 @@ hook and MCP files consistent across Codex, OpenCode, and VS Code Copilot.
 
 ## Global Agent Skills
 
-The optional host setup script bootstraps `mattpocock/skills` globally for the
+The host setup script bootstraps `mattpocock/skills` globally for the
 `vscode` user instead of writing generated skill artifacts into the repository.
 
 The bootstrap installs the pinned `skills` CLI and then runs:
@@ -296,13 +296,8 @@ git config --show-origin --get gpg.format
 git config --show-origin --get user.signingkey
 ```
 
-5. If you need global agent personalization in this container instance, run:
-
-```bash
-bash .devcontainer/post-create-host-setup.sh
-```
-
-6. Open a new terminal in the container and verify the tools if needed.
+1. Wait for the automatic host setup phase to finish after the base bootstrap.
+1. Open a new terminal in the container and verify the tools if needed.
 
 ## Verification Checklist
 
@@ -348,13 +343,12 @@ If host Git identity is configured correctly, the `git config --show-origin`
 commands above should resolve from `/home/vscode/.gitconfig` or from the
 sanitized include path under `~/.config/git/host-identity.inc`.
 
-### Optional Host Setup Checks
+### Host Setup Checks
 
-Run these only after `bash .devcontainer/post-create-host-setup.sh`. They do
-not validate container-wide installation; they validate user-level agent state
-written under the `vscode` home directory.
+These checks validate the user-level agent state written under the `vscode`
+home directory by the second post-create phase.
 
-To verify the optional host-level setup after running it:
+To verify the host setup after container creation, rebuild, or a manual rerun:
 
 ```bash
 context-mode doctor
@@ -376,11 +370,11 @@ missing config files.
 it to validate runtimes and SQLite/FTS5 support from the installed CLI. In this
 container, `context-mode --version` starts the MCP server process instead of
 acting as a one-shot version probe, so the bootstrap intentionally avoids it.
-After the optional host setup writes the global host configuration,
+After the host setup writes the global host configuration,
 Codex-specific hook warnings should be limited to trust or runtime conditions
 rather than missing files.
 
-To inspect the generated global host config after the optional script runs:
+To inspect the generated global host config after the host setup script runs:
 
 ```bash
 cat ~/.codex/config.toml
@@ -390,7 +384,7 @@ cat ~/.vscode-server/data/Machine/mcp.json
 cat ~/.claude/settings.json
 ```
 
-To verify the globally installed agent skills after the optional script runs:
+To verify the globally installed agent skills after the host setup script runs:
 
 ```bash
 test -f ~/.agents/.skill-lock.json
@@ -398,7 +392,7 @@ find ~/.agents/skills -maxdepth 2 -name SKILL.md | head
 skills ls --global --json
 ```
 
-The optional host setup is considered successful when the command exits
+The host setup phase is considered successful when the command exits
 without error, prints `Installing to: Codex, GitHub Copilot, OpenCode`,
 and `skills ls
 --global --json` reports the installed skills with `scope: global`.

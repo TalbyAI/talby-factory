@@ -16,7 +16,7 @@
 	"mounts": [
 		"source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/home/vscode/.gitconfig-host,type=bind,readonly"
 	],
-	"postCreateCommand": "bash .devcontainer/post-create.sh",
+	"postCreateCommand": "bash .devcontainer/post-create.sh && bash .devcontainer/post-create-host-setup.sh",
 	"customizations": {
 		"vscode": {
 			"extensions": [
