@@ -21,6 +21,7 @@ post-create bootstrap script.
 * OpenCode CLI `1.17.7`
 * Codex CLI `0.140.0`
 * Context Mode CLI `1.0.162`
+* GitNexus CLI `1.6.7`
 * Skills CLI `1.5.11`
 
 ## Global Context Mode Host Wiring
@@ -87,6 +88,8 @@ copilot --version
 opencode --version
 codex --version
 context-mode doctor
+gitnexus --version
+gitnexus doctor
 skills --version
 ```
 
@@ -120,6 +123,11 @@ The install is considered successful when the command exits without error,
 prints `Installing to: Codex, GitHub Copilot, OpenCode`, and `skills ls
 --global --json` reports the installed skills with `scope: global`.
 
+GitNexus is installed globally with `npm install -g gitnexus@1.6.7`.
+The bootstrap uses `gitnexus --version` as the fast availability probe and
+`gitnexus doctor` as the runtime smoke test for the `vscode` user inside the
+container.
+
 ## Authentication Notes
 
 Some CLIs may require authentication after the container starts.
@@ -131,6 +139,13 @@ local diagnostics. If you later wire it into an agent host, that integration may
 reuse the host's existing auth or environment variables such as `GITHUB_TOKEN`,
 `GH_TOKEN`, or provider API keys. That setup stays manual and is not part of the
 bootstrap.
+
+GitNexus does not require GitHub, GitLab, or token-based authentication to
+install, run `gitnexus doctor`, or index local repositories with `gitnexus
+analyze`. Optional authenticated flows remain manual: `gitnexus publish` needs
+`UNDERSTAND_QUICKLY_TOKEN`, and LLM-backed `gitnexus wiki` setup may persist a
+provider API key under `~/.gitnexus/config.json` the first time you enable it.
+Those secrets stay outside the repository.
 
 OpenCode does not need a separate stdio MCP block because `context-mode` runs as
 an OpenCode plugin. VS Code Copilot still requires normal MCP server trust inside

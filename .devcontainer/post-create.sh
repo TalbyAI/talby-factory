@@ -12,6 +12,7 @@ readonly COPILOT_VERSION="1.0.63"
 readonly OPENCODE_VERSION="1.17.7"
 readonly CODEX_VERSION="0.140.0"
 readonly CONTEXT_MODE_VERSION="1.0.162"
+readonly GITNEXUS_VERSION="1.6.7"
 readonly SKILLS_VERSION="1.5.11"
 readonly SKILLS_TARGET_AGENTS=("codex" "github-copilot" "opencode")
 readonly CODEX_CONFIG_PATH="/home/vscode/.codex/config.toml"
@@ -445,6 +446,7 @@ main() {
     "opencode-ai@$OPENCODE_VERSION" \
     "@openai/codex@$CODEX_VERSION" \
     "context-mode@$CONTEXT_MODE_VERSION" \
+    "gitnexus@$GITNEXUS_VERSION" \
     "skills@$SKILLS_VERSION"
 
   install_global_skills
@@ -463,6 +465,8 @@ main() {
   opencode --version
   codex --version
   context-mode doctor
+  gitnexus --version
+  gitnexus doctor
   test -f "$CODEX_CONFIG_PATH"
   test -f "$CODEX_HOOKS_PATH"
   test -f "$OPENCODE_CONFIG_PATH"

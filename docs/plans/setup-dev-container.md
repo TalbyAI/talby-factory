@@ -75,14 +75,25 @@ Resultado validado de Task 2:
 - `context-mode doctor` reportó PASS en storage, server test y FTS5/SQLite. En la validación acotada posterior al wiring también confirmó PASS para los hooks detectables de Claude/VS Code y terminó con `EXIT:0`; el único WARN restante fue `Plugin enabled`, esperable cuando el entorno opera en modo MCP standalone y no como plugin instalado de Claude Code.
 
 **Task 3: `gitnexus` CLI**
-- [ ] Identificar el canal oficial de instalación para Linux y verificar que funcione sin interacción.
-- [ ] Confirmar si debe quedar como CLI global del contenedor.
-- [ ] Fijar versión y sumar instalación en /.devcontainer/post-create.sh.
-- [ ] Añadir verificación con el subcomando correcto de versión o ayuda mínima.
-- [ ] Confirmar si necesita autenticación con GitHub, GitLab o tokens específicos.
-- [ ] Dejar documentado el flujo de auth sin almacenar secretos en el repo.
-- [ ] Verificar compatibilidad con el usuario remoto `vscode` y el `PATH` del contenedor.
-- [ ] Repetir bootstrap para comprobar que la instalación es estable e idempotente.
+- [x] Identificar el canal oficial de instalación para Linux y verificar que funcione sin interacción.
+- [x] Confirmar si debe quedar como CLI global del contenedor.
+- [x] Fijar versión y sumar instalación en /.devcontainer/post-create.sh.
+- [x] Añadir verificación con el subcomando correcto de versión o ayuda mínima.
+- [x] Confirmar si necesita autenticación con GitHub, GitLab o tokens específicos.
+- [x] Dejar documentado el flujo de auth sin almacenar secretos en el repo.
+- [x] Verificar compatibilidad con el usuario remoto `vscode` y el `PATH` del contenedor.
+- [x] Repetir bootstrap para comprobar que la instalación es estable e idempotente.
+
+Resultado validado de Task 3:
+
+- La documentación oficial de GitNexus confirmó instalación global en Linux con `npm install -g gitnexus`; la prueba real en este contenedor con `gitnexus@1.6.7` terminó sin interacción.
+- La decisión final de este repo es dejar GitNexus como CLI global del contenedor, alineado con el patrón ya usado para otras herramientas Node pinneadas en `/.devcontainer/post-create.sh`.
+- La versión fijada para bootstrap quedó en `1.6.7` y se agregó al bloque npm global del script.
+- La verificación automática elegida para el bootstrap es doble: `gitnexus --version` como probe rápido de disponibilidad y `gitnexus doctor` como smoke test del runtime.
+- `gitnexus --help` y `gitnexus doctor` corrieron correctamente con el usuario remoto `vscode`, confirmando que el binario global queda accesible en el `PATH` actual del contenedor sin wiring extra.
+- GitNexus no requiere autenticación con GitHub, GitLab ni tokens para instalarse, arrancar o analizar repos locales. Los únicos secretos opcionales detectados fueron `UNDERSTAND_QUICKLY_TOKEN` para `gitnexus publish` y un posible API key de proveedor para `gitnexus wiki`, ambos fuera del repo.
+- El flujo de auth manual quedó documentado en `/.devcontainer/README.md` sin persistir credenciales en archivos versionados.
+- La rerun completa de `/.devcontainer/post-create.sh` terminó sin error después de sumar GitNexus. El bootstrap volvió a instalar y verificar todas las herramientas esperadas, y `gitnexus --version` junto con `gitnexus doctor` pasaron dentro de la misma ejecución.
 
 **Task 4: `gentle-ai` CLI**
 - [ ] Identificar el canal oficial de instalación para Linux y su forma correcta de pinnear versión.
