@@ -13,9 +13,11 @@ readonly OPENSRC_SKILL_SOURCE="vercel-labs/opensrc/skills/opensrc#v0.7.2"
 source "$DEVCONTAINER_DIR/lib.sh"
 
 readonly SKILLS_TARGET_AGENTS=("codex" "github-copilot" "opencode")
+readonly GLOBAL_SKILLS_PATH="/home/vscode/.agents/skills"
 readonly CODEX_CONFIG_PATH="/home/vscode/.codex/config.toml"
 readonly CODEX_HOOKS_PATH="/home/vscode/.codex/hooks.json"
 readonly OPENCODE_CONFIG_PATH="/home/vscode/.config/opencode/opencode.jsonc"
+readonly OPENCODE_SKILLS_PATH="/home/vscode/.config/opencode/skills"
 readonly CLAUDE_SETTINGS_PATH="/home/vscode/.claude/settings.json"
 readonly VSCODE_REMOTE_MCP_PATH="/home/vscode/.vscode-server/data/Machine/mcp.json"
 readonly CONFIG_HELPERS_PATH="$DEVCONTAINER_DIR/config-helpers.js"
@@ -37,6 +39,23 @@ install_global_skills() {
     --agent "${SKILLS_TARGET_AGENTS[@]}"
   run_skills_global_command add "$OPENSRC_SKILL_SOURCE" --global --yes \
     --agent "${SKILLS_TARGET_AGENTS[@]}"
+}
+
+sync_opencode_skills() {
+  ensure_directory "$(dirname "$OPENCODE_SKILLS_PATH")"
+
+  if [[ ! -d "$GLOBAL_SKILLS_PATH" ]]; then
+    echo "Expected global skills directory at $GLOBAL_SKILLS_PATH after install." >&2
+    return 1
+  fi
+
+  if [[ -L "$OPENCODE_SKILLS_PATH" ]]; then
+    rm -f "$OPENCODE_SKILLS_PATH"
+  elif [[ -e "$OPENCODE_SKILLS_PATH" ]]; then
+    rm -rf "$OPENCODE_SKILLS_PATH"
+  fi
+
+  ln -s "$GLOBAL_SKILLS_PATH" "$OPENCODE_SKILLS_PATH"
 }
 
 ensure_codex_context_mode_config() {
@@ -302,6 +321,8 @@ verify_host_setup() {
   test -f "$CODEX_CONFIG_PATH"
   test -f "$CODEX_HOOKS_PATH"
   test -f "$OPENCODE_CONFIG_PATH"
+  test -L "$OPENCODE_SKILLS_PATH"
+  test "$(readlink "$OPENCODE_SKILLS_PATH")" = "$GLOBAL_SKILLS_PATH"
   test -f "$VSCODE_REMOTE_MCP_PATH"
   test -f "$CLAUDE_SETTINGS_PATH"
   run_skills_global_command ls --global --json | grep -F 'opensrc' >/dev/null
@@ -318,6 +339,7 @@ EOF
 
 main() {
   install_global_skills
+  sync_opencode_skills
 
   ensure_codex_context_mode_config
   ensure_codex_context_mode_hooks

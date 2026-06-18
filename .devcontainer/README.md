@@ -179,6 +179,12 @@ lockfiles.
 This writes the installed skills to `~/.agents/skills/` and the global
 lockfile to `~/.agents/.skill-lock.json`.
 
+After the global install completes, the host setup script also synchronizes
+OpenCode's expected skills path by recreating `~/.config/opencode/skills` as a
+symlink to `~/.agents/skills/`. That keeps the checked-in OpenCode SDD prompts,
+which read from `~/.config/opencode/skills/...`, aligned with the actual
+container bootstrap layout.
+
 The command was validated to detect the installed agents non-interactively
 and install the skills for Codex, GitHub Copilot, and OpenCode.
 
