@@ -7,30 +7,28 @@
 
 set -euo pipefail
 
+readonly DEVCONTAINER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+source "$DEVCONTAINER_DIR/lib.sh"
+
 readonly SKILLS_TARGET_AGENTS=("codex" "github-copilot" "opencode")
 readonly CODEX_CONFIG_PATH="/home/vscode/.codex/config.toml"
 readonly CODEX_HOOKS_PATH="/home/vscode/.codex/hooks.json"
 readonly OPENCODE_CONFIG_PATH="/home/vscode/.config/opencode/opencode.jsonc"
 readonly CLAUDE_SETTINGS_PATH="/home/vscode/.claude/settings.json"
 readonly VSCODE_REMOTE_MCP_PATH="/home/vscode/.vscode-server/data/Machine/mcp.json"
-
-ensure_directory() {
-  local path="$1"
-
-  mkdir -p "$path"
-}
+readonly CONFIG_HELPERS_PATH="$DEVCONTAINER_DIR/config-helpers.js"
 
 run_skills_global_command() {
   local temp_dir
 
   temp_dir="$(mktemp -d)"
+  trap 'cleanup_path "$temp_dir"' RETURN
 
   (
     cd "$temp_dir"
     skills "$@"
   )
-
-  rm -rf "$temp_dir"
 }
 
 install_global_skills() {
@@ -139,38 +137,15 @@ EOF
 ensure_codex_context_mode_hooks() {
   ensure_directory "$(dirname "$CODEX_HOOKS_PATH")"
 
-  node - "$CODEX_HOOKS_PATH" <<'NODE'
+  DEVCONTAINER_CONFIG_HELPERS="$CONFIG_HELPERS_PATH" node - "$CODEX_HOOKS_PATH" <<'NODE'
 const fs = require('fs');
+const { ensureHookCommand, ensureObject, loadJsonFile, saveJsonFile } = require(process.env.DEVCONTAINER_CONFIG_HELPERS);
 
 const filePath = process.argv[2];
+const config = loadJsonFile(filePath, { hooks: {} });
+ensureObject(config, 'hooks');
 
-const ensureEventGroup = (config, eventName, group, command) => {
-  const entries = Array.isArray(config.hooks[eventName]) ? config.hooks[eventName] : [];
-  const alreadyPresent = entries.some((entry) =>
-    Array.isArray(entry.hooks) && entry.hooks.some((hook) => hook.type === 'command' && hook.command === command)
-  );
-
-  if (!alreadyPresent) {
-    entries.push(group);
-  }
-
-  config.hooks[eventName] = entries;
-};
-
-let config = { hooks: {} };
-
-if (fs.existsSync(filePath)) {
-  const raw = fs.readFileSync(filePath, 'utf8').trim();
-  if (raw) {
-    config = JSON.parse(raw);
-  }
-}
-
-if (!config.hooks || typeof config.hooks !== 'object') {
-  config.hooks = {};
-}
-
-ensureEventGroup(
+ensureHookCommand(
   config,
   'PreToolUse',
   {
@@ -179,7 +154,7 @@ ensureEventGroup(
   },
   'context-mode hook codex pretooluse'
 );
-ensureEventGroup(
+ensureHookCommand(
   config,
   'PostToolUse',
   {
@@ -188,7 +163,7 @@ ensureEventGroup(
   },
   'context-mode hook codex posttooluse'
 );
-ensureEventGroup(
+ensureHookCommand(
   config,
   'SessionStart',
   {
@@ -197,7 +172,7 @@ ensureEventGroup(
   },
   'context-mode hook codex sessionstart'
 );
-ensureEventGroup(
+ensureHookCommand(
   config,
   'PreCompact',
   {
@@ -206,7 +181,7 @@ ensureEventGroup(
   },
   'context-mode hook codex precompact'
 );
-ensureEventGroup(
+ensureHookCommand(
   config,
   'UserPromptSubmit',
   {
@@ -214,7 +189,7 @@ ensureEventGroup(
   },
   'context-mode hook codex userpromptsubmit'
 );
-ensureEventGroup(
+ensureHookCommand(
   config,
   'Stop',
   {
@@ -223,101 +198,25 @@ ensureEventGroup(
   'context-mode hook codex stop'
 );
 
-fs.writeFileSync(filePath, `${JSON.stringify(config, null, 2)}\n`);
+saveJsonFile(filePath, config);
 NODE
 }
 
 ensure_opencode_context_mode_plugin() {
   ensure_directory "$(dirname "$OPENCODE_CONFIG_PATH")"
 
-  node - "$OPENCODE_CONFIG_PATH" <<'NODE'
-const fs = require('fs');
+  DEVCONTAINER_CONFIG_HELPERS="$CONFIG_HELPERS_PATH" node - "$OPENCODE_CONFIG_PATH" <<'NODE'
+const { addUniqueValue, ensureArray, loadJsonFile, saveJsonFile } = require(process.env.DEVCONTAINER_CONFIG_HELPERS);
 
 const filePath = process.argv[2];
-
-const stripJsonComments = (input) => {
-  let output = '';
-  let inString = false;
-  let escaped = false;
-  let inLineComment = false;
-  let inBlockComment = false;
-
-  for (let index = 0; index < input.length; index += 1) {
-    const current = input[index];
-    const next = input[index + 1];
-
-    if (inLineComment) {
-      if (current === '\n') {
-        inLineComment = false;
-        output += current;
-      }
-      continue;
-    }
-
-    if (inBlockComment) {
-      if (current === '*' && next === '/') {
-        inBlockComment = false;
-        index += 1;
-      }
-      continue;
-    }
-
-    if (inString) {
-      output += current;
-      if (escaped) {
-        escaped = false;
-      } else if (current === '\\') {
-        escaped = true;
-      } else if (current === '"') {
-        inString = false;
-      }
-      continue;
-    }
-
-    if (current === '"') {
-      inString = true;
-      output += current;
-      continue;
-    }
-
-    if (current === '/' && next === '/') {
-      inLineComment = true;
-      index += 1;
-      continue;
-    }
-
-    if (current === '/' && next === '*') {
-      inBlockComment = true;
-      index += 1;
-      continue;
-    }
-
-    output += current;
-  }
-
-  return output;
-};
-
-let config = {};
-
-if (fs.existsSync(filePath)) {
-  const raw = fs.readFileSync(filePath, 'utf8').trim();
-  if (raw) {
-    config = JSON.parse(stripJsonComments(raw));
-  }
-}
+const config = loadJsonFile(filePath, {}, { allowComments: true });
 
 if (!config.$schema) {
   config.$schema = 'https://opencode.ai/config.json';
 }
 
-if (!Array.isArray(config.plugin)) {
-  config.plugin = [];
-}
-
-if (!config.plugin.includes('context-mode')) {
-  config.plugin.push('context-mode');
-}
+const plugins = ensureArray(config, 'plugin');
+addUniqueValue(plugins, 'context-mode');
 
 if (config.mcp && Object.prototype.hasOwnProperty.call(config.mcp, 'context-mode')) {
   delete config.mcp['context-mode'];
@@ -326,74 +225,40 @@ if (config.mcp && Object.prototype.hasOwnProperty.call(config.mcp, 'context-mode
   }
 }
 
-fs.writeFileSync(filePath, `${JSON.stringify(config, null, 2)}\n`);
+saveJsonFile(filePath, config);
 NODE
 }
 
 ensure_vscode_context_mode_mcp() {
   ensure_directory "$(dirname "$VSCODE_REMOTE_MCP_PATH")"
 
-  node - "$VSCODE_REMOTE_MCP_PATH" <<'NODE'
-const fs = require('fs');
+  DEVCONTAINER_CONFIG_HELPERS="$CONFIG_HELPERS_PATH" node - "$VSCODE_REMOTE_MCP_PATH" <<'NODE'
+const { ensureObject, loadJsonFile, saveJsonFile } = require(process.env.DEVCONTAINER_CONFIG_HELPERS);
 
 const filePath = process.argv[2];
 
-let config = { servers: {} };
+const config = loadJsonFile(filePath, { servers: {} });
+const servers = ensureObject(config, 'servers');
 
-if (fs.existsSync(filePath)) {
-  const raw = fs.readFileSync(filePath, 'utf8').trim();
-  if (raw) {
-    config = JSON.parse(raw);
-  }
-}
-
-if (!config.servers || typeof config.servers !== 'object') {
-  config.servers = {};
-}
-
-config.servers['context-mode'] = {
+servers['context-mode'] = {
   command: 'context-mode',
 };
 
-fs.writeFileSync(filePath, `${JSON.stringify(config, null, 2)}\n`);
+saveJsonFile(filePath, config);
 NODE
 }
 
 ensure_vscode_context_mode_hooks() {
   ensure_directory "$(dirname "$CLAUDE_SETTINGS_PATH")"
 
-  node - "$CLAUDE_SETTINGS_PATH" <<'NODE'
-const fs = require('fs');
+  DEVCONTAINER_CONFIG_HELPERS="$CONFIG_HELPERS_PATH" node - "$CLAUDE_SETTINGS_PATH" <<'NODE'
+const { ensureHookCommand, ensureObject, loadJsonFile, saveJsonFile } = require(process.env.DEVCONTAINER_CONFIG_HELPERS);
 
 const filePath = process.argv[2];
+const config = loadJsonFile(filePath, { hooks: {} });
+ensureObject(config, 'hooks');
 
-const ensureEventGroup = (config, eventName, group, command) => {
-  const entries = Array.isArray(config.hooks[eventName]) ? config.hooks[eventName] : [];
-  const alreadyPresent = entries.some((entry) =>
-    Array.isArray(entry.hooks) && entry.hooks.some((hook) => hook.type === 'command' && hook.command === command)
-  );
-
-  if (!alreadyPresent) {
-    entries.push(group);
-  }
-
-  config.hooks[eventName] = entries;
-};
-
-let config = {};
-
-if (fs.existsSync(filePath)) {
-  const raw = fs.readFileSync(filePath, 'utf8').trim();
-  if (raw) {
-    config = JSON.parse(raw);
-  }
-}
-
-if (!config.hooks || typeof config.hooks !== 'object') {
-  config.hooks = {};
-}
-
-ensureEventGroup(
+ensureHookCommand(
   config,
   'PreToolUse',
   {
@@ -401,7 +266,7 @@ ensureEventGroup(
   },
   'context-mode hook vscode-copilot pretooluse'
 );
-ensureEventGroup(
+ensureHookCommand(
   config,
   'PostToolUse',
   {
@@ -409,7 +274,7 @@ ensureEventGroup(
   },
   'context-mode hook vscode-copilot posttooluse'
 );
-ensureEventGroup(
+ensureHookCommand(
   config,
   'PreCompact',
   {
@@ -417,7 +282,7 @@ ensureEventGroup(
   },
   'context-mode hook vscode-copilot precompact'
 );
-ensureEventGroup(
+ensureHookCommand(
   config,
   'SessionStart',
   {
@@ -426,8 +291,26 @@ ensureEventGroup(
   'context-mode hook vscode-copilot sessionstart'
 );
 
-fs.writeFileSync(filePath, `${JSON.stringify(config, null, 2)}\n`);
+saveJsonFile(filePath, config);
 NODE
+}
+
+verify_host_setup() {
+  test -f "$CODEX_CONFIG_PATH"
+  test -f "$CODEX_HOOKS_PATH"
+  test -f "$OPENCODE_CONFIG_PATH"
+  test -f "$VSCODE_REMOTE_MCP_PATH"
+  test -f "$CLAUDE_SETTINGS_PATH"
+  run_skills_global_command ls --global --json >/dev/null
+  context-mode doctor
+}
+
+print_host_setup_summary() {
+  cat <<'EOF'
+
+Optional host-level agent setup finished.
+Global skills and Context Mode host wiring are now configured for the current user.
+EOF
 }
 
 main() {
@@ -439,19 +322,8 @@ main() {
   ensure_vscode_context_mode_mcp
   ensure_vscode_context_mode_hooks
 
-  test -f "$CODEX_CONFIG_PATH"
-  test -f "$CODEX_HOOKS_PATH"
-  test -f "$OPENCODE_CONFIG_PATH"
-  test -f "$VSCODE_REMOTE_MCP_PATH"
-  test -f "$CLAUDE_SETTINGS_PATH"
-  run_skills_global_command ls --global --json >/dev/null
-  context-mode doctor
-
-  cat <<'EOF'
-
-Optional host-level agent setup finished.
-Global skills and Context Mode host wiring are now configured for the current user.
-EOF
+  verify_host_setup
+  print_host_setup_summary
 }
 
 main "$@"

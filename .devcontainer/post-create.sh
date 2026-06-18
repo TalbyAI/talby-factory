@@ -7,6 +7,10 @@
 
 set -euo pipefail
 
+readonly DEVCONTAINER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+source "$DEVCONTAINER_DIR/lib.sh"
+
 readonly ASPIRE_VERSION="13.4.5"
 readonly COPILOT_VERSION="1.0.63"
 readonly OPENCODE_VERSION="1.17.7"
@@ -22,12 +26,6 @@ readonly GH_INSTALL_ROOT="/usr/local/lib/gh-cli"
 readonly HOST_GITCONFIG_PATH="/home/vscode/.gitconfig-host"
 readonly SANITIZED_HOST_GITCONFIG_PATH="/home/vscode/.config/git/host-identity.inc"
 readonly ALLOWED_SIGNERS_PATH="/home/vscode/.config/git/allowed_signers"
-
-ensure_directory() {
-  local path="$1"
-
-  mkdir -p "$path"
-}
 
 select_ssh_signing_key() {
   ssh-add -L 2>/dev/null | awk '
@@ -208,6 +206,7 @@ install_gh_cli() {
   asset_name="gh_${GH_VERSION}_linux_${architecture}.tar.gz"
   download_url="https://github.com/cli/cli/releases/download/v${GH_VERSION}/${asset_name}"
   temp_dir="$(mktemp -d)"
+  trap 'cleanup_path "$temp_dir"' RETURN
 
   curl --fail --silent --show-error --location \
     --retry 5 \
@@ -220,20 +219,16 @@ install_gh_cli() {
     --strip-components=1 \
     -C "$GH_INSTALL_ROOT"
   sudo install -m 0755 "$GH_INSTALL_ROOT/bin/gh" /usr/local/bin/gh
+}
 
-    rm -rf "$temp_dir"
-  }
-
-  main() {
-    ensure_git_host_config_include
-
+install_dotnet_tools() {
   dotnet tool update --global aspire.cli --version "$ASPIRE_VERSION" \
     || dotnet tool install --global aspire.cli --version "$ASPIRE_VERSION"
   dotnet tool update --global csharpier --version "$CSHARPIER_VERSION" \
     || dotnet tool install --global csharpier --version "$CSHARPIER_VERSION"
+}
 
-  install_gh_cli
-
+install_node_tools() {
   npm install -g \
     "@github/copilot@$COPILOT_VERSION" \
     "opencode-ai@$OPENCODE_VERSION" \
@@ -243,7 +238,9 @@ install_gh_cli() {
     "markdownlint-cli2@$MARKDOWNLINT_CLI2_VERSION" \
     "@biomejs/biome@$BIOME_VERSION" \
     "skills@$SKILLS_VERSION"
+}
 
+verify_base_bootstrap() {
   docker --version
   node --version
   pnpm --version
@@ -260,7 +257,9 @@ install_gh_cli() {
   csharpier --version
   biome --version
   skills --version
+}
 
+print_base_bootstrap_summary() {
   cat <<'EOF'
 
 Base Dev Container bootstrap finished.
@@ -270,6 +269,15 @@ Optional host-level agent setup now lives in:
   bash .devcontainer/post-create-host-setup.sh
 Run it manually after attach if you want global skills installation and Context Mode host wiring.
 EOF
+}
+
+main() {
+  ensure_git_host_config_include
+  install_dotnet_tools
+  install_gh_cli
+  install_node_tools
+  verify_base_bootstrap
+  print_base_bootstrap_summary
 }
 
 main "$@"

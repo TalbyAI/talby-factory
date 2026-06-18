@@ -147,6 +147,10 @@ for the three agent hosts already installed in the container:
 This keeps the hook and MCP wiring out of the repository and makes the setup
 repeatable on container rebuild.
 
+The optional setup now shares JSON merge helpers from
+`./config-helpers.js`, which keeps the repeated read-merge-write logic for
+hook and MCP files consistent across Codex, OpenCode, and VS Code Copilot.
+
 ## Global Agent Skills
 
 The optional host setup script bootstraps `mattpocock/skills` globally for the
@@ -182,6 +186,10 @@ and install the skills for Codex, GitHub Copilot, and OpenCode.
    registers the mounted host Git config as a global include when present.
 * [post-create-host-setup.sh](./post-create-host-setup.sh) applies optional
    global skills installation and Context Mode host wiring for the current user.
+* [lib.sh](./lib.sh) contains small shared shell helpers reused by both
+   bootstrap scripts.
+* [config-helpers.js](./config-helpers.js) contains shared JSON merge helpers
+   for the optional host setup script.
 
 ## How To Use It
 
