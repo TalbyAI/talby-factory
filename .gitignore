@@ -11,5 +11,8 @@
 # Built Visual Studio Code Extensions
 *.vsix
 
+# Local agent workspace state
+.atl/
+
 # HVE Core Copilot Tracking
 .copilot-tracking/*
