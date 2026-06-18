@@ -124,29 +124,57 @@ Resultado validado de Task 3:
 - [ ] Validar que la instalación/configuración no interfiera con el resto de agentes ya instalados en el contenedor.
 
 **Task 7: `markdownlint-cli2`**
-- [ ] Confirmar el paquete oficial exacto y su instalación global reproducible.
-- [ ] Fijar versión y sumarla a /.devcontainer/post-create.sh.
-- [ ] Añadir comando de verificación al bloque final del script.
-- [ ] Definir si hace falta configuración adicional en el repo o si por ahora solo se instala la CLI.
-- [ ] Documentar el comando mínimo de uso y verificación en /.devcontainer/README.md.
-- [ ] Verificar que la instalación no colisiona con otras herramientas Node globales del contenedor.
+- [x] Confirmar el paquete oficial exacto y su instalación global reproducible.
+- [x] Fijar versión y sumarla a /.devcontainer/post-create.sh.
+- [x] Añadir comando de verificación al bloque final del script.
+- [x] Definir si hace falta configuración adicional en el repo o si por ahora solo se instala la CLI.
+- [x] Documentar el comando mínimo de uso y verificación en /.devcontainer/README.md.
+- [x] Verificar que la instalación no colisiona con otras herramientas Node globales del contenedor.
+
+Resultado validado de Task 7:
+
+- La documentación oficial de `markdownlint-cli2` confirmó que el paquete correcto es `markdownlint-cli2` y que el canal reproducible para este contenedor es `npm install -g markdownlint-cli2`.
+- La versión fijada en el bootstrap quedó en `0.22.1` y se agregó al bloque npm global de `/.devcontainer/post-create.sh`.
+- La verificación automática elegida para el bootstrap es `markdownlint-cli2 --help >/dev/null`; en validación interactiva el comando mostró `markdownlint-cli2 v0.22.1 (markdownlint v0.40.0)`.
+- La decisión de este repo es no crear todavía configuración adicional como `.markdownlint*` o `.markdownlint-cli2.*`; por ahora solo se instala la CLI y se deja explícito que cualquier policy de reglas queda para una tarea posterior.
+- La guía del contenedor quedó actualizada con comandos mínimos de uso y verificación: `markdownlint-cli2 "**/*.md"` y `markdownlint-cli2 --fix "**/*.md"`.
+- La rerun completa del bootstrap terminó sin conflicto con otras herramientas Node globales ya presentes; `markdownlint-cli2` quedó accesible en `/usr/local/share/nvm/versions/node/v24.16.0/bin/markdownlint-cli2`.
 
 **Task 8: `csharpier`**
-- [ ] Confirmar si `csharpier` debe instalarse como `.NET global tool` y cuál es su versión objetivo.
-- [ ] Añadir constante de versión y comando `dotnet tool update --global` o `install --global` en /.devcontainer/post-create.sh.
-- [ ] Verificar que el `PATH` actual ya cubre tools para el binario.
-- [ ] Añadir verificación del comando al final del script.
-- [ ] Definir si el repo necesita configuración adicional o si por ahora basta con el binario instalado.
-- [ ] Documentar el uso básico y la validación en la guía del contenedor.
-- [ ] Reejecutar bootstrap para comprobar que convive correctamente con `aspire.cli`.
+- [x] Confirmar si `csharpier` debe instalarse como `.NET global tool` y cuál es su versión objetivo.
+- [x] Añadir constante de versión y comando `dotnet tool update --global` o `install --global` en /.devcontainer/post-create.sh.
+- [x] Verificar que el `PATH` actual ya cubre tools para el binario.
+- [x] Añadir verificación del comando al final del script.
+- [x] Definir si el repo necesita configuración adicional o si por ahora basta con el binario instalado.
+- [x] Documentar el uso básico y la validación en la guía del contenedor.
+- [x] Reejecutar bootstrap para comprobar que convive correctamente con `aspire.cli`.
+
+Resultado validado de Task 8:
+
+- La documentación oficial de CSharpier confirmó instalación como `.NET global tool`; la versión objetivo fijada para este bootstrap quedó en `1.3.0`.
+- `/.devcontainer/post-create.sh` ahora usa el mismo patrón idempotente que `aspire.cli`: `dotnet tool update --global csharpier --version "$CSHARPIER_VERSION" || dotnet tool install --global csharpier --version "$CSHARPIER_VERSION"`.
+- El chequeo barato del entorno confirmó que `PATH` ya incluye `~/.dotnet/tools`; la validación real mostró que el shim expuesto es `csharpier`, no `dotnet-csharpier`, en `/home/vscode/.dotnet/tools/csharpier`.
+- La verificación final del bootstrap quedó como `command -v csharpier >/dev/null` y `csharpier --version`, que devolvió `1.3.0` en terminal limpia.
+- La decisión del repo es no crear todavía tool manifest local ni configuración adicional; por ahora basta con el binario global instalado y documentado.
+- La guía del contenedor quedó actualizada con uso mínimo real: `csharpier format .` y `csharpier check .`.
+- La rerun completa del bootstrap confirmó convivencia correcta con `aspire.cli`; ambos global tools siguen resolviendo sin wiring extra.
 
 **Task 9: `biome`**
-- [ ] Confirmar el paquete oficial exacto y la forma de instalación global recomendada para Linux.
-- [ ] Fijar versión e incorporarla al bloque npm global de /.devcontainer/post-create.sh si corresponde.
-- [ ] Añadir verificación del binario al final del script.
-- [ ] Definir si solo se instala la herramienta o también se deja pendiente configuración de repo.
-- [ ] Documentar cómo validar la instalación y qué no queda configurado todavía.
-- [ ] Verificar que no interfiere con otras herramientas Node del entorno.
+- [x] Confirmar el paquete oficial exacto y la forma de instalación global recomendada para Linux.
+- [x] Fijar versión e incorporarla al bloque npm global de /.devcontainer/post-create.sh si corresponde.
+- [x] Añadir verificación del binario al final del script.
+- [x] Definir si solo se instala la herramienta o también se deja pendiente configuración de repo.
+- [x] Documentar cómo validar la instalación y qué no queda configurado todavía.
+- [x] Verificar que no interfiere con otras herramientas Node del entorno.
+
+Resultado validado de Task 9:
+
+- La documentación oficial de Biome confirmó que el paquete npm correcto es `@biomejs/biome`; para este contenedor se adoptó instalación global reproducible con `npm install -g @biomejs/biome`.
+- La versión fijada en el bootstrap quedó en `2.5.0` y se agregó al bloque npm global de `/.devcontainer/post-create.sh`.
+- La verificación automática elegida para el bootstrap es `biome --version`, que devolvió `Version: 2.5.0` en la validación posterior.
+- La decisión del repo es dejar pendiente cualquier `biome.json` o inicialización de proyecto; en esta tarea solo se instala la herramienta y se documenta explícitamente que la configuración del repo no quedó adoptada todavía.
+- La guía del contenedor quedó actualizada con validación y uso mínimo real: `biome --version`, `biome check .` y `biome format .`.
+- La rerun completa del bootstrap confirmó que `@biomejs/biome` no interfiere con las demás herramientas Node globales del entorno y que el binario queda accesible en `/usr/local/share/nvm/versions/node/v24.16.0/bin/biome`.
 
 **Task 10: Documentación final del contenedor**
 - [ ] Actualizar /.devcontainer/README.md con la lista final de herramientas incluidas.

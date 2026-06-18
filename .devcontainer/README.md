@@ -22,6 +22,9 @@ post-create bootstrap script.
 * Codex CLI `0.140.0`
 * Context Mode CLI `1.0.162`
 * GitNexus CLI `1.6.7`
+* markdownlint-cli2 `0.22.1`
+* CSharpier `1.3.0`
+* Biome `2.5.0`
 * Skills CLI `1.5.11`
 
 ## Global Context Mode Host Wiring
@@ -90,6 +93,9 @@ codex --version
 context-mode doctor
 gitnexus --version
 gitnexus doctor
+markdownlint-cli2 --help | head -n 2
+csharpier --version
+biome --version
 skills --version
 ```
 
@@ -128,6 +134,47 @@ The bootstrap uses `gitnexus --version` as the fast availability probe and
 `gitnexus doctor` as the runtime smoke test for the `vscode` user inside the
 container.
 
+`markdownlint-cli2` is installed globally with
+`npm install -g markdownlint-cli2@0.22.1`.
+The bootstrap uses `markdownlint-cli2 --help` as the availability probe.
+No repository configuration is created for it yet, so the tool is installed and
+ready, but rules and ignores still depend on future repo-level `.markdownlint*`
+or `.markdownlint-cli2.*` configuration if the project adopts one.
+
+Minimal usage and verification:
+
+```bash
+markdownlint-cli2 "**/*.md"
+markdownlint-cli2 --fix "**/*.md"
+```
+
+`csharpier` is installed globally with
+`dotnet tool update --global csharpier --version 1.3.0` and falls back to
+`dotnet tool install --global` on first bootstrap.
+The current container `PATH` already includes `~/.dotnet/tools`, so the exposed
+global command is `csharpier`.
+No local tool manifest or repository config is created yet.
+
+Minimal usage and verification:
+
+```bash
+csharpier format .
+csharpier check .
+```
+
+`biome` is installed globally with `npm install -g @biomejs/biome@2.5.0`.
+The bootstrap uses `biome --version` as the fast availability probe.
+No `biome.json` or other repository configuration is created yet, so the CLI is
+available without committing the repo to Biome rules until a later task decides
+that explicitly.
+
+Minimal usage and verification:
+
+```bash
+biome check .
+biome format .
+```
+
 ## Authentication Notes
 
 Some CLIs may require authentication after the container starts.
@@ -146,6 +193,10 @@ analyze`. Optional authenticated flows remain manual: `gitnexus publish` needs
 `UNDERSTAND_QUICKLY_TOKEN`, and LLM-backed `gitnexus wiki` setup may persist a
 provider API key under `~/.gitnexus/config.json` the first time you enable it.
 Those secrets stay outside the repository.
+
+`markdownlint-cli2`, `csharpier`, and `biome` do not require login, tokens, or
+environment variables for installation or for the local verification commands
+documented above.
 
 OpenCode does not need a separate stdio MCP block because `context-mode` runs as
 an OpenCode plugin. VS Code Copilot still requires normal MCP server trust inside
