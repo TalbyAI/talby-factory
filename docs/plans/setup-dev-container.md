@@ -224,7 +224,49 @@ Resultado validado de Task 9:
 - La guía del contenedor quedó actualizada con validación y uso mínimo real: `biome --version`, `biome check .` y `biome format .`.
 - La rerun completa del bootstrap confirmó que `@biomejs/biome` no interfiere con las demás herramientas Node globales del entorno y que el binario queda accesible en `/usr/local/share/nvm/versions/node/v24.16.0/bin/biome`.
 
-**Task 11: Documentación final del contenedor**
+**Task 11: `opensrc` CLI + skill global**
+
+- [x] Confirmar el paquete oficial exacto del CLI y su instalación global
+	reproducible.
+- [x] Fijar versión del CLI e incorporarla al bloque npm global de
+	/.devcontainer/post-create.sh.
+- [x] Añadir verificación del binario al final del script.
+- [x] Confirmar si la skill oficial puede instalarse globalmente para Codex,
+	GitHub Copilot y OpenCode sin escribir en el repo.
+- [x] Definir si conviene pinnear la skill a un tag o ref explícita.
+- [x] Incorporar la instalación de la skill al flujo existente de
+	/.devcontainer/post-create-host-setup.sh.
+- [x] Documentar qué queda automatizado y qué sigue siendo manual para no mutar
+	el workspace.
+- [x] Validar que el source pinneado de la skill se resuelve correctamente con
+	`skills`.
+
+Resultado validado de Task 11:
+
+- La documentación oficial de `opensrc` confirmó instalación global
+	reproducible con `npm install -g opensrc`; para este repo se fijó la versión
+	`0.7.2`.
+- `/.devcontainer/post-create.sh` ahora instala `opensrc@0.7.2` dentro del
+	bloque npm global ya usado para el resto de CLIs Node y lo verifica con
+	`opensrc --version`.
+- La skill oficial existe dentro del mismo repo en `skills/opensrc/SKILL.md`,
+	así que no hizo falta inventar instrucciones globales manuales ni copiar
+	artifacts al workspace.
+- La instalación global de la skill quedó integrada al host setup con
+	`skills add vercel-labs/opensrc/skills/opensrc#v0.7.2 --global --yes --agent codex github-copilot opencode`.
+- Se eligió pinnear la skill al tag `v0.7.2` para mantener alineados el
+	binario `opensrc` y el contenido de la skill, aunque el requerimiento de pin
+	no era crítico.
+- La validación acotada del source de la skill se hizo con
+	`skills add ... --list`, que resolvió correctamente
+	`https://github.com/vercel-labs/opensrc.git @ v0.7.2 (skills/opensrc)` y
+	listó una única skill llamada `opensrc`.
+- La decisión final de este repo es no automatizar ninguna mutación de
+	`AGENTS.md`, `.gitignore` ni otros archivos del workspace desde `opensrc`;
+	el bootstrap solo deja instalado el CLI y la skill global, y cualquier uso
+	que modifique archivos queda manual y explícito.
+
+**Task 12: Documentación final del contenedor**
 - [ ] Actualizar /.devcontainer/README.md con la lista final de herramientas incluidas.
 - [ ] Añadir comandos de verificación para cada herramienta instalada.
 - [ ] Añadir notas de autenticación para las herramientas que lo requieran.
@@ -252,6 +294,7 @@ Resultado validado de Task 9:
 8. `engram`
 9. `gga`
 10. `mattpocock/skills`
-11. documentación final
+11. `opensrc`
+12. documentación final
 
 Si querés, el siguiente paso lógico es que convierta esta checklist en un archivo real dentro del repo, por ejemplo /.devcontainer/tooling-tasks.md, para que quede versionado y visible para cualquiera que trabaje en el contenedor.

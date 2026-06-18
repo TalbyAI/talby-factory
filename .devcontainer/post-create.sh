@@ -24,6 +24,7 @@ readonly GGA_VERSION="2.8.1"
 readonly MARKDOWNLINT_CLI2_VERSION="0.22.1"
 readonly CSHARPIER_VERSION="1.3.0"
 readonly BIOME_VERSION="2.5.0"
+readonly OPENSRC_VERSION="0.7.2"
 readonly SKILLS_VERSION="1.5.11"
 readonly GH_INSTALL_ROOT="/usr/local/lib/gh-cli"
 readonly GENTLE_AI_INSTALL_ROOT="/usr/local/lib/gentle-ai"
@@ -352,6 +353,7 @@ install_node_tools() {
     "gitnexus@$GITNEXUS_VERSION" \
     "markdownlint-cli2@$MARKDOWNLINT_CLI2_VERSION" \
     "@biomejs/biome@$BIOME_VERSION" \
+    "opensrc@$OPENSRC_VERSION" \
     "skills@$SKILLS_VERSION"
 }
 
@@ -374,6 +376,7 @@ verify_base_bootstrap() {
   command -v csharpier >/dev/null
   csharpier --version
   biome --version
+  opensrc --version
   skills --version
 }
 

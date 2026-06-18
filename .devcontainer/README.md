@@ -118,6 +118,7 @@ paths that are invalid on Linux.
 * markdownlint-cli2 `0.22.1`
 * CSharpier `1.3.0`
 * Biome `2.5.0`
+* opensrc CLI `0.7.2`
 * Skills CLI `1.5.11`
 
 ## Post-Create Flow
@@ -156,13 +157,15 @@ hook and MCP files consistent across Codex, OpenCode, and VS Code Copilot.
 
 ## Global Agent Skills
 
-The host setup script bootstraps `mattpocock/skills` globally for the
-`vscode` user instead of writing generated skill artifacts into the repository.
+The host setup script bootstraps global agent skills for the `vscode` user
+instead of writing generated skill artifacts into the repository.
 
 The bootstrap installs the pinned `skills` CLI and then runs:
 
 ```bash
 skills add mattpocock/skills --global --yes --agent codex github-copilot opencode
+skills add vercel-labs/opensrc/skills/opensrc#v0.7.2 \
+   --global --yes --agent codex github-copilot opencode
 ```
 
 The bootstrap intentionally limits `skills` fan-out to the three agent hosts this
@@ -178,6 +181,11 @@ lockfile to `~/.agents/.skill-lock.json`.
 
 The command was validated to detect the installed agents non-interactively
 and install the skills for Codex, GitHub Copilot, and OpenCode.
+
+The `opensrc` skill is pinned to the `v0.7.2` tag from the upstream repo so
+the CLI version and the global skill stay aligned. The skill installation is
+still user-scoped and uses the same temporary-directory isolation as the other
+global `skills` operations.
 
 ## Gentle AI, Engram, and GGA
 
@@ -328,6 +336,7 @@ gga version
 markdownlint-cli2 --version
 csharpier --version
 biome --version
+opensrc --version
 skills --version
 git config --show-origin --get user.name
 git config --show-origin --get user.email
@@ -396,6 +405,22 @@ The host setup phase is considered successful when the command exits
 without error, prints `Installing to: Codex, GitHub Copilot, OpenCode`,
 and `skills ls
 --global --json` reports the installed skills with `scope: global`.
+
+`opensrc` is installed globally with `npm install -g opensrc@0.7.2`.
+The bootstrap uses `opensrc --version` as the fast availability probe.
+No repository integration is automated during bootstrap: the CLI is present,
+the official `opensrc` skill is installed globally for the configured agents,
+and any later `AGENTS.md` or `.gitignore` changes remain an explicit runtime
+choice when you invoke `opensrc` yourself.
+
+Minimal usage and verification:
+
+```bash
+opensrc --version
+opensrc fetch zod
+opensrc path zod
+skills ls --global --json | grep opensrc
+```
 
 GitNexus is installed globally with `npm install -g gitnexus@1.6.7`.
 The bootstrap uses `gitnexus --version` as the fast availability probe and
@@ -494,6 +519,14 @@ the container instead of storing credentials in repository files.
 `markdownlint-cli2`, `csharpier`, and `biome` do not require login, tokens, or
 environment variables for installation or for the local verification commands
 documented above.
+
+`opensrc` does not require login, tokens, or environment variables for public
+packages or public repositories. For private GitHub, GitLab, or Bitbucket
+repositories it reads provider tokens from the environment at runtime, such as
+`OPENSRC_GITHUB_TOKEN`, `OPENSRC_GITLAB_TOKEN`, or `BITBUCKET_TOKEN`. Those
+stay manual and outside the repository. The CLI can also offer to update files
+like `AGENTS.md` or `.gitignore` when you use it interactively, but the
+bootstrap does not invoke any modifying `opensrc` commands.
 
 OpenCode does not need a separate stdio MCP block because `context-mode` runs as
 an OpenCode plugin. VS Code Copilot still requires normal MCP server trust inside

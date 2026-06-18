@@ -8,6 +8,7 @@
 set -euo pipefail
 
 readonly DEVCONTAINER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly OPENSRC_SKILL_SOURCE="vercel-labs/opensrc/skills/opensrc#v0.7.2"
 
 source "$DEVCONTAINER_DIR/lib.sh"
 
@@ -33,6 +34,8 @@ run_skills_global_command() {
 
 install_global_skills() {
   run_skills_global_command add mattpocock/skills --global --yes \
+    --agent "${SKILLS_TARGET_AGENTS[@]}"
+  run_skills_global_command add "$OPENSRC_SKILL_SOURCE" --global --yes \
     --agent "${SKILLS_TARGET_AGENTS[@]}"
 }
 
@@ -301,7 +304,7 @@ verify_host_setup() {
   test -f "$OPENCODE_CONFIG_PATH"
   test -f "$VSCODE_REMOTE_MCP_PATH"
   test -f "$CLAUDE_SETTINGS_PATH"
-  run_skills_global_command ls --global --json >/dev/null
+  run_skills_global_command ls --global --json | grep -F 'opensrc' >/dev/null
   context-mode doctor
 }
 
