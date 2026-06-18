@@ -1,0 +1,40 @@
+schema: spec-driven
+
+context: |
+  Tech stack: DevContainer bootstrap workspace with Bash, Node.js,
+  and .NET tooling.
+  Architecture: Repository-scoped container bootstrap and
+  agent-tooling documentation.
+  Testing: No project test runner; validation is command-based for
+  narrow workflows.
+  Style: Minimal diffs, pinned versions, and docs updated with
+  bootstrap changes.
+
+rules:
+  proposal:
+    - Keep scope anchored to devcontainer bootstrap, agent setup, or
+      documentation behavior.
+    - Document pinned versions, verification commands, and manual
+      follow-up for tooling changes.
+  specs:
+    - Use Given/When/Then for scenarios.
+    - Use RFC 2119 keywords (MUST, SHOULD, MAY).
+  design:
+    - Prefer small explicit changes over broad framework abstraction.
+    - Record bootstrap and documentation coupling when setup behavior
+      changes.
+  tasks:
+    - Keep work slices reviewable and independently verifiable.
+    - Update docs with bootstrap changes in the same change set when
+      behavior changes.
+  apply:
+    - Follow repository conventions from AGENTS.md and
+      .devcontainer/README.md.
+  tdd: false
+  test_command: ""
+  verify:
+    test_command: ""
+    build_command: ""
+    coverage_threshold: 0
+  archive:
+    - Preserve archived change folders as the audit trail.
