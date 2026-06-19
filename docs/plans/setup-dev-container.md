@@ -298,3 +298,15 @@ Resultado validado de Task 11:
 12. documentación final
 
 Si querés, el siguiente paso lógico es que convierta esta checklist en un archivo real dentro del repo, por ejemplo /.devcontainer/tooling-tasks.md, para que quede versionado y visible para cualquiera que trabaje en el contenedor.
+
+### WishList de mejoras futuras y herramientas opcionales
+
+- [ ] `ponytail` plugin:
+  - Moto: He says nothing. He writes one line. It works.
+  - url: https://github.com/DietrichGebert/ponytail
+- [ ] `HVE Core` plugin:
+  - Instalar en los agentes de CLI y no solamente en VS Code como extensión.
+  - Se sabe que en copilot es posible instalarlo, pero no queda claro para el resto de agentes.
+- [ ] `Headroom` MCP:
+  - Compress tool outputs, logs, files, and RAG chunks before they reach the LLM. 60-95% fewer tokens, same answers. Library, proxy, MCP server. 
+  - url: https://github.com/chopratejas/headroom

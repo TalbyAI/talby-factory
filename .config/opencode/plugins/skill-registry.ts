@@ -15,7 +15,12 @@ const execFileAsync = promisify(execFile)
 
 export const SkillRegistryPlugin: Plugin = async (input) => {
   async function refreshSkillRegistry() {
-    const cwd = input.directory || input.worktree || process.cwd()
+    const cwd = input.directory || input.worktree
+
+    if (!cwd) {
+      console.warn("[skill-registry] skipping refresh until workspace root is available")
+      return
+    }
 
     try {
       await execFileAsync(
