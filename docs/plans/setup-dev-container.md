@@ -1,55 +1,92 @@
 ---
-title: Dev Container Tooling Task Checklist
-description: Checklist for validating incremental Dev Container tooling changes.
+title: Dev Container Layer 1 Baseline
+description: Active setup guide for the rebuilt Layer 1 Dev Container baseline.
 ---
 
-## Plan: Dev Container Tooling Task Checklist
+## Layer 1 Scope
 
-Archivo de tareas para implementar el tooling del Dev Container de a una herramienta por vez, validando cada incorporación antes de pasar a la siguiente. El objetivo es evitar cambios acoplados en /.devcontainer/post-create.sh y poder aislar errores de instalación, de configuración y de documentación.
+Layer 1 is the minimal supported Dev Container baseline for this repository.
+It intentionally covers only foundational tooling and diagnostics:
 
-**Cómo usar este archivo**
-- Tomar una sola herramienta a la vez.
-- No marcar la herramienta como completa hasta validar instalación, idempotencia y documentación.
-- Si una herramienta requiere configuración fuera del bootstrap, anotar esa decisión antes de avanzar.
-- Si una herramienta no soporta instalación Linux no interactiva confiable, degradar a prerequisitos + documentación manual y dejarlo explicitado.
+* the active Dev Container definition in `.devcontainer/`
+* `node` and `pnpm` from the Dev Container feature contract
+* `just` from the repo-owned image layer
+* a minimal root `package.json`
+* a bounded root `Justfile`
+* a diagnostic-only `scripts/doctor.mjs`
 
-**Checklist global previa**
-- [ ] Confirmar el canal de instalación real de la herramienta elegida: `npm`, `npx`, `.NET global tool`, binario descargable u otro.
-- [ ] Confirmar el comando de verificación real: `--version`, `version`, `--help` o smoke test equivalente.
-- [ ] Confirmar si necesita variables de entorno, login, token o archivos persistentes de configuración.
-- [ ] Confirmar si el cambio toca solo /.devcontainer/post-create.sh o también /.devcontainer/devcontainer.json, /.devcontainer/README.md, README.md, /.github o /.engram/config.json.
-- [ ] Definir si la instalación debe ser completamente automática en `postCreateCommand` o si una parte debe quedar como paso manual documentado.
+Layer 1 explicitly does not cover runtime integrations, `HOME` projection,
+agent wiring, authentication state, or any other cross-layer bootstrap logic.
 
-**Confirmación actual del checklist global**
-- Los puntos de canal de instalación, comando de verificación y requisitos de entorno/auth no pueden marcarse de forma global todavía: dependen de la herramienta puntual que se tome en cada task.
-- La superficie real del contenedor ya quedó confirmada en este repo: existen `/.devcontainer/post-create.sh`, `/.devcontainer/devcontainer.json`, `/.devcontainer/README.md`, `README.md` y `/.github/`.
-- También quedó confirmado que hoy no existe `/.engram/config.json`, así que cualquier task que incorpore Engram debe tratar ese archivo como cambio explícito y no como infraestructura ya presente.
-- El patrón actual del contenedor es instalación automática no interactiva desde `postCreateCommand` apuntando a `bash .devcontainer/post-create.sh`.
-- El patrón actual de bootstrap instala CLIs globales pinneadas y valida disponibilidad al final del script con comandos de versión o equivalentes.
-- El patrón actual de documentación deja la autenticación y cualquier credencial como paso manual posterior, documentado en `/.devcontainer/README.md`.
-- Con el estado actual del repo, el único punto parcialmente confirmado de forma global es el de archivos potencialmente afectados; los demás deben resolverse herramienta por herramienta antes de marcarse.
+## Current Baseline
 
-**Task 1: `mattpocock/skills` para agentes instalados**
-- [x] Verificar qué instala exactamente `npx skills@latest add mattpocock/skills` y en qué ubicación escribe.
-- [x] Verificar si el comando es idempotente o si necesita guardas para no duplicar configuración al recrear el contenedor.
-- [x] Determinar si el destino de instalación es de usuario o de workspace.
-- [x] Si escribe fuera del repo, decidir si se acepta estado local o si hace falta una alternativa versionable.
-- [x] Diseñar el paso exacto dentro de /.devcontainer/post-create.sh o documentar por qué no debe automatizarse ahí.
-- [x] Definir el criterio de éxito: comando ejecutado sin error y skills visibles para los agentes instalados.
-- [x] Agregar verificación explícita en la documentación del contenedor.
-- [x] Probar una segunda ejecución para confirmar que no rompe el entorno.
-- [x] No pasar a la siguiente herramienta hasta dejar resuelta la interacción con agents instalados.
+The active Layer 1 baseline is declared through these repo-owned files:
 
-Resultado validado de Task 1:
+| Category | Files | Responsibility |
+|----------|-------|----------------|
+| Image or base environment tooling | `.devcontainer/devcontainer.json`, `.devcontainer/Dockerfile` | Define the supported container baseline and install workspace-independent base tooling |
+| Repo-local tooling | `package.json`, `Justfile`, `scripts/doctor.mjs` | Expose the bounded command surface and Layer 1 diagnostics |
+| Runtime integrations | None in Layer 1 | Deferred to a later layer by design |
+| `HOME` projections | None in Layer 1 | Deferred to a later layer by design |
+| Manual or credential-dependent steps | Dev Container rebuild or reopen | Required to materialize image-time changes in the running environment |
 
-- La documentación oficial del CLI confirmó soporte de instalación global con `-g` / `--global`.
-- `skills add mattpocock/skills --global --yes --agent codex github-copilot opencode` instala fuera del repo: escribe en `~/.agents/skills/**` y `~/.agents/.skill-lock.json`.
-- El bootstrap ya no borra `./.agents` ni lockfiles locales del workspace. En cambio, ejecuta las operaciones globales de `skills` desde un directorio temporal para no interferir con posibles skills de proyecto que sí quieran vivir en este repo.
-- La segunda ejecución no creó rutas duplicadas, pero sí reescribió el árbol global completo y el lockfile global. O sea: es estable en layout y apta para bootstrap porque no ensucia el repo, aunque no evita rewrite de timestamps en el home del usuario.
-- Con la preferencia de este repo, la decisión final es instalar `skills` globalmente desde `/.devcontainer/post-create.sh` con versión pinneada del CLI y sin generar artifacts versionados dentro del workspace.
-- El bootstrap quedó restringido a los tres hosts que este repo usa y documenta: Codex, GitHub Copilot y OpenCode; deja de intentar fan-out hacia otros agentes detectados en la máquina.
-- Criterio de éxito adoptado: el comando termina con exit code `0`, el instalador informa `Installing to: Codex, GitHub Copilot, OpenCode`, `skills ls --global --json` lista los skills con `scope: global`, y el repo no recibe artifacts locales inesperados durante el bootstrap.
-- La verificación explícita quedó documentada en `/.devcontainer/README.md`.
+## Supported Commands
+
+Layer 1 exposes a deliberately narrow public surface:
+
+```bash
+pnpm doctor
+just doctor
+just --list
+```
+
+`doctor` diagnoses only the Layer 1 baseline. It does not mutate the
+environment, install missing tools, or attempt runtime integration repair.
+
+## Validation Model
+
+Use these checks for the current Layer 1 baseline:
+
+```bash
+node -e "JSON.parse(require('fs').readFileSync('.devcontainer/devcontainer.json','utf8'))"
+node --version
+pnpm --version
+pnpm doctor
+just --list
+```
+
+Expected behavior:
+
+* `pnpm doctor` reports only Layer 1 findings
+* missing `just` in an already-running container is a rebuild signal, not a runtime integration failure
+* `just --list` succeeds after the Dev Container is rebuilt or reopened from the repo-declared image path
+
+## Rebuild Requirement
+
+The repository now declares `just` through `.devcontainer/Dockerfile`. Existing
+containers created before that image change will not have `just` until the Dev
+Container is rebuilt or reopened.
+
+Until that rebuild happens, these behaviors are expected:
+
+* `node --version` and `pnpm --version` can pass in the current session
+* `pnpm doctor` can run and report a bounded warning that `just` is missing
+* `just --list` can fail with `command not found`
+
+This is a Layer 1 validation blocker, not a reason to reintroduce lifecycle
+bootstrap logic.
+
+## Deferred Work
+
+The following concerns are intentionally deferred beyond Layer 1:
+
+* runtime integrations and agent hosts
+* `HOME` projection and user-scoped config writes
+* authentication-dependent setup
+* broader setup or repair workflows
+
+For the retired mixed-responsibility bootstrap model and its replacement
+mapping, see `.devcontainer/archive/legacy-bootstrap.md`.
 
 **Task 2: `context-mode` CLI**
 - [x] Identificar el paquete o binario oficial para Linux y su método de instalación reproducible.

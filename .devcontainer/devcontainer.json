@@ -1,6 +1,9 @@
 {
 	"name": "talby-factory",
-	"image": "mcr.microsoft.com/devcontainers/dotnet:2-10.0-noble",
+	"build": {
+		"dockerfile": "Dockerfile",
+		"context": ".."
+	},
 	"features": {
 		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
 		"ghcr.io/devcontainers/features/node:2": {
