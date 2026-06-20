@@ -12,6 +12,8 @@
 			"nodeGypDependencies": true
 		}
 	},
+	"postCreateCommand": "bash .devcontainer/post-create.sh",
+	"postStartCommand": "bash .devcontainer/post-start.sh",
 	"remoteUser": "vscode",
 	"customizations": {
 		"vscode": {
