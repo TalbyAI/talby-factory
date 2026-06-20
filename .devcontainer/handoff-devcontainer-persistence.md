@@ -38,7 +38,8 @@ container can disappear on rebuild.
   - `~/.config/opencode`
   - `~/.vscode-server/data/Machine`
   - `~/.claude`
-  See `./.devcontainer/post-create-host-setup.sh`.
+   The retired host-setup implementation wrote those locations during the legacy
+   bootstrap flow.
 - The repository documentation explicitly states that bootstrap
    does not persist credentials and that sign-in remains manual.
    See `./.devcontainer/README.md`.
@@ -70,7 +71,6 @@ existing artifacts directly:
 - `./.devcontainer/README.md`
 - `./docs/plans/setup-dev-container.md`
 - `./.devcontainer/devcontainer.json`
-- `./.devcontainer/post-create-host-setup.sh`
 - `./AGENTS.md`
 
 ## Recommended Next Session Checks

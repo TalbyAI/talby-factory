@@ -6,7 +6,7 @@ const DEFAULT_HOST = '127.0.0.1';
 const DEFAULT_PORT = 8123;
 
 const printUsage = () => {
-  console.log(`Usage: node .devcontainer/serve-container-html.js --root <dir> --file <name> [options]\n\nOptions:\n  --root <dir>   Directory to serve (required)\n  --file <name>  Default file to open at / (required)\n  --host <host>  Host to bind (default: ${DEFAULT_HOST})\n  --port <port>  Port to bind (default: ${DEFAULT_PORT})\n  --help         Show this help\n`);
+  console.log(`Usage: node .devcontainer/archive/serve-container-html.js --root <dir> --file <name> [options]\n\nOptions:\n  --root <dir>   Directory to serve (required)\n  --file <name>  Default file to open at / (required)\n  --host <host>  Host to bind (default: ${DEFAULT_HOST})\n  --port <port>  Port to bind (default: ${DEFAULT_PORT})\n  --help         Show this help\n`);
 };
 
 const parseArgs = (argv) => {

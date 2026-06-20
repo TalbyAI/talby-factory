@@ -10,13 +10,6 @@
 		}
 	},
 	"remoteUser": "vscode",
-	"remoteEnv": {
-		"PATH": "${containerEnv:PATH}:/home/vscode/.dotnet/tools"
-	},
-	"mounts": [
-		"source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/home/vscode/.gitconfig-host,type=bind,readonly"
-	],
-	"postCreateCommand": "bash .devcontainer/post-create.sh && bash .devcontainer/post-create-host-setup.sh",
 	"customizations": {
 		"vscode": {
 			"extensions": [

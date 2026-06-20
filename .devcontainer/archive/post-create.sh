@@ -432,7 +432,7 @@ Base Dev Container bootstrap finished.
 Host Git config include path:
   /home/vscode/.gitconfig-host
 Optional host-level agent setup now lives in:
-  bash .devcontainer/post-create-host-setup.sh
+  bash .devcontainer/archive/post-create-host-setup.sh
 Run it manually after attach if you want global skills installation and Context Mode host wiring.
 EOF
 }

@@ -19,9 +19,10 @@ bootstrap, agent setup, and documentation.
 
 ## Working Model
 
-- Treat `.devcontainer/post-create.sh` as the main bootstrap entry point.
-- Treat `.devcontainer/post-create-host-setup.sh` as optional host-level setup,
-  not baseline repo bootstrap.
+- Treat `.devcontainer/devcontainer.json` as the active container entry point.
+- Treat `.devcontainer/archive/` as historical reference material, not as part
+  of the active setup contract, unless a later rebuild task explicitly
+  reactivates or replaces part of it.
 - Prefer updating docs when changing bootstrap behavior. In this repo, code and
   documentation are tightly coupled.
 - Keep version changes explicit and pinned. Do not silently switch install
@@ -31,8 +32,9 @@ bootstrap, agent setup, and documentation.
 
 - There is no general app test suite yet. Validate the narrowest affected
   workflow instead of inventing broad checks.
-- For bootstrap changes, prefer targeted command checks and the documented
-  version probes from [.devcontainer/README.md](./.devcontainer/README.md).
+- For bootstrap changes, prefer targeted checks against the active container
+  definition and the current documentation contract in
+  [.devcontainer/README.md](./.devcontainer/README.md).
 - For Markdown changes, run `markdownlint-cli2` when the container tooling is
   available.
 - If you change both bootstrap behavior and docs, verify both in the same pass.
@@ -48,10 +50,6 @@ bootstrap, agent setup, and documentation.
 - Engram project resolution should stay `talby-factory`. If project-scoped
   memory starts resolving elsewhere, verify `.engram/config.json` before saving
   new observations.
-- Host browsers cannot open container-only paths through `file:///home/vscode/...`.
-  When an agent needs to open HTML generated inside the container, use
-  `just open-html root=/path/in/container file=name.html` and then open the reported
-  `http://127.0.0.1:<port>/...` URL instead.
 
 ## Existing Host-Specific Instructions
 
