@@ -48,6 +48,10 @@ bootstrap, agent setup, and documentation.
 - Engram project resolution should stay `talby-factory`. If project-scoped
   memory starts resolving elsewhere, verify `.engram/config.json` before saving
   new observations.
+- Host browsers cannot open container-only paths through `file:///home/vscode/...`.
+  When an agent needs to open HTML generated inside the container, use
+  `just open-html root=/path/in/container file=name.html` and then open the reported
+  `http://127.0.0.1:<port>/...` URL instead.
 
 ## Existing Host-Specific Instructions
 

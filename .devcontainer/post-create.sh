@@ -26,10 +26,12 @@ readonly CSHARPIER_VERSION="1.3.0"
 readonly BIOME_VERSION="2.5.0"
 readonly OPENSRC_VERSION="0.7.2"
 readonly SKILLS_VERSION="1.5.11"
+readonly JUST_VERSION="1.43.1"
 readonly GH_INSTALL_ROOT="/usr/local/lib/gh-cli"
 readonly GENTLE_AI_INSTALL_ROOT="/usr/local/lib/gentle-ai"
 readonly ENGRAM_INSTALL_ROOT="/usr/local/lib/engram"
 readonly GGA_INSTALL_ROOT="/usr/local/lib/gga"
+readonly JUST_INSTALL_ROOT="/usr/local/lib/just"
 readonly HOST_GITCONFIG_PATH="/home/vscode/.gitconfig-host"
 readonly SANITIZED_HOST_GITCONFIG_PATH="/home/vscode/.config/git/host-identity.inc"
 readonly ALLOWED_SIGNERS_PATH="/home/vscode/.config/git/allowed_signers"
@@ -337,6 +339,48 @@ install_gga_cli() {
   cleanup_path "$temp_dir"
 }
 
+install_just_cli() {
+  local architecture
+  local asset_name
+  local download_url
+  local extracted_dir
+  local temp_dir
+
+  architecture="$(dpkg --print-architecture)"
+
+  case "$architecture" in
+    amd64)
+      asset_name="just-${JUST_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+      ;;
+    arm64)
+      asset_name="just-${JUST_VERSION}-aarch64-unknown-linux-musl.tar.gz"
+      ;;
+    *)
+      echo "Unsupported architecture for just: $architecture" >&2
+      return 1
+      ;;
+  esac
+
+  download_url="https://github.com/casey/just/releases/download/${JUST_VERSION}/${asset_name}"
+  temp_dir="$(mktemp -d)"
+
+  curl --fail --silent --show-error --location \
+    --retry 5 \
+    --retry-all-errors \
+    --retry-delay 2 \
+    "$download_url" -o "$temp_dir/$asset_name"
+
+  extracted_dir="$temp_dir/extracted"
+  mkdir -p "$extracted_dir"
+  tar -xzf "$temp_dir/$asset_name" -C "$extracted_dir"
+
+  sudo rm -rf "$JUST_INSTALL_ROOT"
+  sudo mkdir -p "$JUST_INSTALL_ROOT"
+  sudo install -m 0755 "$extracted_dir/just" "$JUST_INSTALL_ROOT/just"
+  sudo install -m 0755 "$JUST_INSTALL_ROOT/just" /usr/local/bin/just
+  cleanup_path "$temp_dir"
+}
+
 install_dotnet_tools() {
   dotnet tool update --global aspire.cli --version "$ASPIRE_VERSION" \
     || dotnet tool install --global aspire.cli --version "$ASPIRE_VERSION"
@@ -378,6 +422,7 @@ verify_base_bootstrap() {
   biome --version
   opensrc --version
   skills --version
+  just --version
 }
 
 print_base_bootstrap_summary() {
@@ -399,6 +444,7 @@ main() {
   install_gentle_ai_cli
   install_engram_cli
   install_gga_cli
+  install_just_cli
   install_node_tools
   verify_base_bootstrap
   print_base_bootstrap_summary

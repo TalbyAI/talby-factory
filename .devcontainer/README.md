@@ -120,6 +120,7 @@ paths that are invalid on Linux.
 * Biome `2.5.0`
 * opensrc CLI `0.7.2`
 * Skills CLI `1.5.11`
+* just `1.43.1`
 
 ## Post-Create Flow
 
@@ -136,6 +137,14 @@ installation and Context Mode host wiring for the current `vscode` user.
 
 You can still rerun either script manually when you want to troubleshoot or
 reapply only one phase.
+
+The repository root now also exposes a minimal `Justfile` for post-create
+checks that are useful after the container is already up:
+
+```bash
+just doctor
+just lint-md
+```
 
 ## Global Context Mode Host Wiring
 
@@ -344,6 +353,7 @@ csharpier --version
 biome --version
 opensrc --version
 skills --version
+just --version
 git config --show-origin --get user.name
 git config --show-origin --get user.email
 git config --show-origin --get gpg.format
@@ -353,6 +363,19 @@ git config --show-origin --get user.signingkey
 `context-mode doctor` appears in the base bootstrap because it is the current
 runtime smoke test for the installed CLI itself: runtimes, server startup, and
 SQLite/FTS5 support.
+
+For a post-create diagnostic that combines the base tooling checks, the
+expected user-level wiring, Git identity/signing checks, and warning-only auth
+guidance for agent CLIs, use:
+
+```bash
+just doctor
+```
+
+`just doctor` exits with code `1` only for hard failures such as missing
+tooling, missing expected config files, or missing Git identity/signing
+settings. Auth and provider setup gaps stay as human-readable warnings that
+print the exact follow-up command to run.
 
 If host Git identity is configured correctly, the `git config --show-origin`
 commands above should resolve from `/home/vscode/.gitconfig` or from the
@@ -461,6 +484,7 @@ Minimal usage and verification:
 ```bash
 markdownlint-cli2 "**/*.md"
 markdownlint-cli2 --fix "**/*.md"
+just lint-md
 ```
 
 `csharpier` is installed globally with
@@ -541,6 +565,43 @@ the editor the first time the global user-profile server is discovered.
 The global `~/.claude/settings.json` hook file is written specifically for the
 VS Code Copilot adapter commands. If you later use Claude Code in the same
 container, review that file before reusing it there.
+
+## Opening Container-Local HTML In The Host Browser
+
+When you run `"$BROWSER" file:///home/vscode/...` from inside the container,
+the host browser resolves that `file://` URL on the host filesystem, not inside
+ the container. Files that exist only under container paths such as
+`/home/vscode/.agent/diagrams/` therefore do not open that way.
+
+To view a container-local HTML file in the host browser, serve its directory
+over localhost from inside the container and open the HTTP URL instead:
+
+```bash
+cd /workspaces/talby-factory
+just open-html \
+   root=/home/vscode/.agent/diagrams \
+   file=ponytail-devcontainer-compatibility-plan.html
+```
+
+Then open:
+
+```bash
+"$BROWSER" "http://127.0.0.1:8123/ponytail-devcontainer-compatibility-plan.html"
+```
+
+Keep that terminal running while the page is open. Stop it with `Ctrl+C` when
+you are done.
+
+The helper requires both `root` and `file`. `host` and `port` still default to
+`127.0.0.1` and `8123`. You can override all of them when needed:
+
+```bash
+just open-html \
+   root=/some/container/folder \
+   file=another-report.html \
+   host=127.0.0.1 \
+   port=9000
+```
 
 > [!IMPORTANT]
 > The base bootstrap script installs the CLIs, but it does not persist your

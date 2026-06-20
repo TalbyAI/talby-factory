@@ -266,7 +266,23 @@ Resultado validado de Task 11:
 	el bootstrap solo deja instalado el CLI y la skill global, y cualquier uso
 	que modifique archivos queda manual y explícito.
 
-**Task 12: Documentación final del contenedor**
+**Task 12: `ponytail` plugin**
+- [ ] Confirmar el tag upstream exacto a pinnear para este repo.
+- [ ] Definir la ruta canónica del checkout local, por ejemplo `~/.local/share/ponytail/<tag>`.
+- [ ] Implementar la materialización del checkout pinneado desde `/.devcontainer/post-create-host-setup.sh` sin escribir artifacts generados en el workspace.
+- [ ] Configurar Codex con `codex plugin marketplace add DietrichGebert/ponytail`.
+- [ ] Configurar Codex con `codex plugin add ponytail@ponytail`.
+- [ ] Verificar si la confianza de hooks de Codex se puede dejar presembrada o si debe quedar como paso manual documentado.
+- [ ] Configurar GitHub Copilot CLI con `copilot plugin marketplace add DietrichGebert/ponytail`.
+- [ ] Configurar GitHub Copilot CLI con `copilot plugin install ponytail@ponytail`.
+- [ ] Configurar OpenCode apuntando el array `plugin` al checkout pinneado de Ponytail.
+- [ ] Enlazar `.opencode/command/*` hacia `~/.config/opencode/command/` de forma idempotente.
+- [ ] Evaluar si conviene copiar `/.github/copilot-instructions.md` hacia `~/.copilot/copilot-instructions.md` como fallback opcional, sin reemplazar automáticamente las reglas propias del repo.
+- [ ] Documentar en `/.devcontainer/README.md` qué parte queda automatizada y qué parte, si alguna, queda manual.
+- [ ] Validar rerun e idempotencia de `/.devcontainer/post-create-host-setup.sh`.
+- [ ] Añadir comandos de verificación para Codex, GitHub Copilot CLI y OpenCode.
+
+**Task 13: Documentación final del contenedor**
 - [ ] Actualizar /.devcontainer/README.md con la lista final de herramientas incluidas.
 - [ ] Añadir comandos de verificación para cada herramienta instalada.
 - [ ] Añadir notas de autenticación para las herramientas que lo requieran.
@@ -295,15 +311,13 @@ Resultado validado de Task 11:
 9. `gga`
 10. `mattpocock/skills`
 11. `opensrc`
-12. documentación final
+12. `ponytail`
+13. documentación final
 
 Si querés, el siguiente paso lógico es que convierta esta checklist en un archivo real dentro del repo, por ejemplo /.devcontainer/tooling-tasks.md, para que quede versionado y visible para cualquiera que trabaje en el contenedor.
 
 ### WishList de mejoras futuras y herramientas opcionales
 
-- [ ] `ponytail` plugin:
-  - Moto: He says nothing. He writes one line. It works.
-  - url: https://github.com/DietrichGebert/ponytail
 - [ ] `HVE Core` plugin:
   - Instalar en los agentes de CLI y no solamente en VS Code como extensión.
   - Se sabe que en copilot es posible instalarlo, pero no queda claro para el resto de agentes.
