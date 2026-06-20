@@ -44,6 +44,19 @@ check_file() {
   return 1
 }
 
+check_file_contains() {
+  local path="$1"
+  local needle="$2"
+
+  if [[ -f "$path" ]] && grep -Fq "$needle" "$path"; then
+    ok "Found $needle in $path"
+    return 0
+  fi
+
+  fail "Missing $needle in $path"
+  return 1
+}
+
 check_git_value() {
   local key="$1"
   local value
@@ -103,9 +116,17 @@ main() {
 
   check_file "$HOME/.agents/.skill-lock.json" || failures=1
   check_file "$HOME/.codex/config.toml" || failures=1
+  check_file_contains "$HOME/.codex/config.toml" '[mcp_servers.engram]' || failures=1
+  check_file_contains "$HOME/.codex/config.toml" 'command = "/usr/local/bin/engram"' || failures=1
   check_file "$HOME/.codex/hooks.json" || failures=1
   check_file "$HOME/.config/opencode/opencode.jsonc" || failures=1
+  check_file_contains "$HOME/.config/opencode/opencode.jsonc" '"engram"' || failures=1
+  check_file_contains "$HOME/.config/opencode/opencode.jsonc" '"/usr/local/bin/engram"' || failures=1
   check_file "$HOME/.vscode-server/data/Machine/mcp.json" || failures=1
+  check_file_contains "$HOME/.vscode-server/data/Machine/mcp.json" '"type": "stdio"' || failures=1
+  check_file_contains "$HOME/.vscode-server/data/Machine/mcp.json" '"context-mode"' || failures=1
+  check_file_contains "$HOME/.vscode-server/data/Machine/mcp.json" '"engram"' || failures=1
+  check_file_contains "$HOME/.vscode-server/data/Machine/mcp.json" '"/usr/local/bin/engram"' || failures=1
   check_file "$HOME/.claude/settings.json" || failures=1
 
   check_git_value 'user.name' || failures=1

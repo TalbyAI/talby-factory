@@ -157,6 +157,12 @@ for the three agent hosts already installed in the container:
    `~/.vscode-server/data/Machine/mcp.json` and global hook config at
    `~/.claude/settings.json`
 
+For VS Code Copilot, `~/.vscode-server/data/Machine/mcp.json` is the live MCP
+configuration that the running VS Code Server actually loads inside the
+container. Repo-local files such as `./.config/Code/User/mcp.json` can serve as
+references, but they do not configure the active MCP server unless some
+separate step copies or merges them into the live machine config.
+
 This keeps the hook and MCP wiring out of the repository and makes the setup
 repeatable on container rebuild.
 
@@ -243,6 +249,18 @@ preset writes agent files into the current repository and user-home state under
 That behavior is appropriate for an explicit setup step, not for the generic
 container bootstrap.
 
+Engram availability for memory tools is separate from that manual `gentle-ai`
+installation step. In practice there are two independent requirements:
+
+* the `engram` binary must exist on `PATH`
+* the active agent host must load an MCP entry that launches `engram mcp`
+
+`gentle-ai` can help manage parts of that broader ecosystem for some hosts, but
+VS Code Copilot in this container only sees Engram when the live remote-user
+MCP config contains the `engram` server entry. If that entry is missing, agent
+instructions may mention `mem_save` or `mem_search`, but those tools will not
+be callable in the session.
+
 `gga` is still treated as an independent CLI. Installing the binary in the
 container does not initialize any repository or install any git hook. Those
 steps remain explicit and manual with `gga init` and `gga install` in the repo
@@ -284,8 +302,14 @@ engram version
 engram mcp --tools=agent
 ```
 
-Then, from an agent session started in this repo, call `mem_current_project`.
-The expected project is `talby-factory`, sourced from repo config rather than a
+Then verify that the live VS Code MCP config contains the Engram server:
+
+```bash
+cat ~/.vscode-server/data/Machine/mcp.json
+```
+
+From an agent session started in this repo, `mem_current_project` should then
+resolve to `talby-factory`, sourced from repo config rather than a
 directory-basename fallback.
 
 ## Files
@@ -398,6 +422,13 @@ test -f ~/.vscode-server/data/Machine/mcp.json
 test -f ~/.claude/settings.json
 skills ls --global --json
 ```
+
+The live MCP file should contain both `context-mode` and `engram` server
+entries.
+
+For command-based local servers, the current VS Code MCP schema requires
+`"type": "stdio"` in each server entry. Omitting `type` can leave the server
+configured on disk but unavailable to chat.
 
 Here `context-mode doctor` serves a different purpose than in the base
 bootstrap: it confirms that the global host wiring now exists and that any
@@ -558,9 +589,15 @@ stay manual and outside the repository. The CLI can also offer to update files
 like `AGENTS.md` or `.gitignore` when you use it interactively, but the
 bootstrap does not invoke any modifying `opensrc` commands.
 
-OpenCode does not need a separate stdio MCP block because `context-mode` runs as
-an OpenCode plugin. VS Code Copilot still requires normal MCP server trust inside
-the editor the first time the global user-profile server is discovered.
+OpenCode uses `context-mode` as a plugin, but Engram is still configured there
+as a normal MCP entry under `~/.config/opencode/opencode.jsonc` so OpenCode can
+expose memory tools. Codex also requires its own Engram MCP entry in
+`~/.codex/config.toml`. VS Code Copilot still requires normal MCP server trust
+inside the editor the first time the global user-profile server is discovered.
+
+GitNexus is installed as a CLI, not as an MCP server. You should expect to see
+it on `PATH`, but not in MCP server lists unless you intentionally wrap it in a
+separate MCP server later.
 
 The global `~/.claude/settings.json` hook file is written specifically for the
 VS Code Copilot adapter commands. If you later use Claude Code in the same

@@ -154,6 +154,15 @@ command = "context-mode"
 CONTEXT_MODE_PLATFORM = "codex"
 EOF
   fi
+
+  if ! grep -Fq '[mcp_servers.engram]' "$CODEX_CONFIG_PATH"; then
+    cat >>"$CODEX_CONFIG_PATH" <<'EOF'
+
+[mcp_servers.engram]
+command = "/usr/local/bin/engram"
+args = ["mcp", "--tools=agent"]
+EOF
+  fi
 }
 
 ensure_codex_context_mode_hooks() {
@@ -228,7 +237,7 @@ ensure_opencode_context_mode_plugin() {
   ensure_directory "$(dirname "$OPENCODE_CONFIG_PATH")"
 
   DEVCONTAINER_CONFIG_HELPERS="$CONFIG_HELPERS_PATH" node - "$OPENCODE_CONFIG_PATH" <<'NODE'
-const { addUniqueValue, ensureArray, loadJsonFile, saveJsonFile } = require(process.env.DEVCONTAINER_CONFIG_HELPERS);
+const { addUniqueValue, ensureArray, ensureObject, loadJsonFile, saveJsonFile } = require(process.env.DEVCONTAINER_CONFIG_HELPERS);
 
 const filePath = process.argv[2];
 const config = loadJsonFile(filePath, {}, { allowComments: true });
@@ -247,11 +256,17 @@ if (config.mcp && Object.prototype.hasOwnProperty.call(config.mcp, 'context-mode
   }
 }
 
+const mcp = ensureObject(config, 'mcp');
+mcp.engram = {
+  command: ['/usr/local/bin/engram', 'mcp', '--tools=agent'],
+  type: 'local',
+};
+
 saveJsonFile(filePath, config);
 NODE
 }
 
-ensure_vscode_context_mode_mcp() {
+ensure_vscode_global_mcp() {
   ensure_directory "$(dirname "$VSCODE_REMOTE_MCP_PATH")"
 
   DEVCONTAINER_CONFIG_HELPERS="$CONFIG_HELPERS_PATH" node - "$VSCODE_REMOTE_MCP_PATH" <<'NODE'
@@ -263,7 +278,14 @@ const config = loadJsonFile(filePath, { servers: {} });
 const servers = ensureObject(config, 'servers');
 
 servers['context-mode'] = {
+  type: 'stdio',
   command: 'context-mode',
+};
+
+servers.engram = {
+  type: 'stdio',
+  command: '/usr/local/bin/engram',
+  args: ['mcp', '--tools=agent'],
 };
 
 saveJsonFile(filePath, config);
@@ -319,11 +341,18 @@ NODE
 
 verify_host_setup() {
   test -f "$CODEX_CONFIG_PATH"
+  grep -F '[mcp_servers.engram]' "$CODEX_CONFIG_PATH" >/dev/null
+  grep -F 'command = "/usr/local/bin/engram"' "$CODEX_CONFIG_PATH" >/dev/null
   test -f "$CODEX_HOOKS_PATH"
   test -f "$OPENCODE_CONFIG_PATH"
+  grep -F '"engram"' "$OPENCODE_CONFIG_PATH" >/dev/null
+  grep -F '"/usr/local/bin/engram"' "$OPENCODE_CONFIG_PATH" >/dev/null
   test -L "$OPENCODE_SKILLS_PATH"
   test "$(readlink "$OPENCODE_SKILLS_PATH")" = "$GLOBAL_SKILLS_PATH"
   test -f "$VSCODE_REMOTE_MCP_PATH"
+  grep -F '"type": "stdio"' "$VSCODE_REMOTE_MCP_PATH" >/dev/null
+  grep -F '"engram"' "$VSCODE_REMOTE_MCP_PATH" >/dev/null
+  grep -F '"/usr/local/bin/engram"' "$VSCODE_REMOTE_MCP_PATH" >/dev/null
   test -f "$CLAUDE_SETTINGS_PATH"
   run_skills_global_command ls --global --json | grep -F 'opensrc' >/dev/null
   context-mode doctor
@@ -333,7 +362,7 @@ print_host_setup_summary() {
   cat <<'EOF'
 
 Optional host-level agent setup finished.
-Global skills and Context Mode host wiring are now configured for the current user.
+Global skills, Context Mode, and Engram MCP wiring are now configured for the current user across VS Code, Codex, and OpenCode.
 EOF
 }
 
@@ -344,7 +373,7 @@ main() {
   ensure_codex_context_mode_config
   ensure_codex_context_mode_hooks
   ensure_opencode_context_mode_plugin
-  ensure_vscode_context_mode_mcp
+  ensure_vscode_global_mcp
   ensure_vscode_context_mode_hooks
 
   verify_host_setup
