@@ -12,7 +12,7 @@
 *.vsix
 
 # Local agent workspace state
-.atl/
+.atl/*
 
 # HVE Core Copilot Tracking
 .copilot-tracking/*
