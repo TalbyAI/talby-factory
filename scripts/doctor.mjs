@@ -143,6 +143,24 @@ function validateCommandSurface() {
     'Validated by the active package.json script target for the running doctor process.'
   );
 
+  if (process.env.LAYER1_DOCTOR_VIA_JUST === '1') {
+    addFinding(
+      'INFO',
+      'just-doctor-starts',
+      'just doctor routes to the same Layer 1 diagnostic entrypoint.',
+      'Validated by the current invocation path from the public Justfile recipe.'
+    );
+  } else {
+    const justDoctor = runCommand('just', ['doctor']);
+
+    if (justDoctor.ok) {
+      addFinding('INFO', 'just-doctor-starts', 'just doctor can start the bounded Layer 1 diagnostic entrypoint.');
+    } else {
+      const detail = justDoctor.error?.message || justDoctor.stderr || `Exit status: ${justDoctor.status}`;
+      addFinding('WARN', 'just-doctor-unavailable', 'just doctor is unavailable in the current environment.', detail);
+    }
+  }
+
   const justList = runCommand('just', ['--list']);
 
   if (justList.ok) {
