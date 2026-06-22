@@ -7,6 +7,11 @@
 	"features": {
 		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
 	},
+	"mounts": [
+		"source=talby-codex-home,target=/home/vscode/.codex,type=volume",
+		"source=talby-opensrc-home,target=/home/vscode/.opensrc,type=volume",
+		"source=talby-agents-skills-home,target=/home/vscode/.agents/skills,type=volume"
+	],
 	"postCreateCommand": "bash .devcontainer/post-create.sh",
 	"postStartCommand": "bash .devcontainer/post-start.sh",
 	"remoteUser": "vscode",

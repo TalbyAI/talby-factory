@@ -1,8 +1,10 @@
 FROM mcr.microsoft.com/devcontainers/dotnet:2-10.0-noble
 
 ENV PNPM_HOME=/usr/local/share/pnpm
+ENV PNPM_BIN_DIR=/usr/local/share/pnpm/bin
+ENV PNPM_GLOBAL_DIR=/usr/local/share/pnpm-global
 ENV DOTNET_TOOLS_DIR=/usr/local/share/dotnet-tools
-ENV PATH=${PNPM_HOME}:${DOTNET_TOOLS_DIR}:${PATH}
+ENV PATH=${PNPM_HOME}:${PNPM_BIN_DIR}:${DOTNET_TOOLS_DIR}:${PATH}
 
 ARG PNPM_VERSION=11.7.0
 ARG NODE_VERSION=24.16.0
@@ -20,7 +22,7 @@ ARG SKILLS_VERSION=1.5.11
 RUN apt-get update \
     && export DEBIAN_FRONTEND=noninteractive \
         && apt-get install -y --no-install-recommends ca-certificates curl just xz-utils \
-        && mkdir -p "$PNPM_HOME" "$DOTNET_TOOLS_DIR" /tmp/gh-cli \
+        && mkdir -p "$PNPM_HOME" "$PNPM_BIN_DIR" "$PNPM_GLOBAL_DIR" "$DOTNET_TOOLS_DIR" /tmp/gh-cli \
         && case "$(dpkg --print-architecture)" in \
             amd64) node_arch='x64' ;; \
             arm64) node_arch='arm64' ;; \
@@ -36,9 +38,13 @@ RUN apt-get update \
         && tar -xzf /tmp/gh-cli/gh.tar.gz -C /tmp/gh-cli --strip-components=1 \
         && install -m 0755 /tmp/gh-cli/bin/gh /usr/local/bin/gh \
         && npm install --global "pnpm@${PNPM_VERSION}" \
-        && pnpm config set global-bin-dir "$PNPM_HOME" \
-        && pnpm config set global-dir /usr/local/share/pnpm-global \
+        && pnpm config set global-bin-dir "$PNPM_BIN_DIR" \
+        && pnpm config set global-dir "$PNPM_GLOBAL_DIR" \
         && pnpm add --global \
+            --allow-build=opencode-ai \
+            --allow-build=gitnexus \
+            --allow-build=@ladybugdb/core \
+            --allow-build=tree-sitter \
             "opencode-ai@${OPENCODE_VERSION}" \
             "@openai/codex@${CODEX_VERSION}" \
             "context-mode@${CONTEXT_MODE_VERSION}" \
@@ -48,5 +54,7 @@ RUN apt-get update \
             "opensrc@${OPENSRC_VERSION}" \
             "skills@${SKILLS_VERSION}" \
         && dotnet tool install --tool-path "$DOTNET_TOOLS_DIR" csharpier --version "$CSHARPIER_VERSION" \
+        && mkdir -p /home/vscode/.codex /home/vscode/.opensrc /home/vscode/.agents/skills \
+        && chown -R vscode:vscode "$PNPM_HOME" "$PNPM_GLOBAL_DIR" "$DOTNET_TOOLS_DIR" /home/vscode/.codex /home/vscode/.opensrc /home/vscode/.agents \
         && rm -rf /tmp/gh-cli /tmp/node.tar.xz \
     && rm -rf /var/lib/apt/lists/*
