@@ -54,7 +54,9 @@ RUN apt-get update \
             "opensrc@${OPENSRC_VERSION}" \
             "skills@${SKILLS_VERSION}" \
         && dotnet tool install --tool-path "$DOTNET_TOOLS_DIR" csharpier --version "$CSHARPIER_VERSION" \
-        && mkdir -p /home/vscode/.codex /home/vscode/.opensrc /home/vscode/.agents/skills \
+        && mkdir -p /home/vscode/.config/pnpm /home/vscode/.codex /home/vscode/.opensrc /home/vscode/.agents/skills \
+        && printf 'globalBinDir: %s\nglobalDir: %s\n' "$PNPM_BIN_DIR" "$PNPM_GLOBAL_DIR" > /home/vscode/.config/pnpm/config.yaml \
         && chown -R vscode:vscode "$PNPM_HOME" "$PNPM_GLOBAL_DIR" "$DOTNET_TOOLS_DIR" /home/vscode/.codex /home/vscode/.opensrc /home/vscode/.agents \
+        && chown -R vscode:vscode /home/vscode/.config/pnpm \
         && rm -rf /tmp/gh-cli /tmp/node.tar.xz \
     && rm -rf /var/lib/apt/lists/*
