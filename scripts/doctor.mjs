@@ -186,6 +186,7 @@ async function main() {
   await validateSupportedBaseline();
   validateTool('node', ['--version'], 'Node.js runtime');
   validateTool('pnpm', ['--version'], 'pnpm runtime');
+  validateTool('docker', ['--version'], 'Docker CLI');
   validateTool('just', ['--version'], 'just command surface runtime', 'WARN');
   await validatePackageManifest();
   await validateLayer1Files();
