@@ -49,6 +49,7 @@ yet as part of the supported baseline.
 ### Developer CLIs already installed
 
 * `aspire`
+* `copilot`
 * `codex`
 * `opencode`
 * `context-mode`
@@ -67,8 +68,6 @@ dev container lifecycle.
 
 ### Runtime integrations not restored yet
 
-* Context Mode hook wiring for Codex and VS Code Copilot
-* MCP wiring for Codex, OpenCode, and VS Code
 * Global skills installation for Codex, GitHub Copilot, and OpenCode
 * OpenCode skill synchronization from the shared global skills path
 
@@ -98,8 +97,11 @@ The current active lifecycle is intentionally narrow:
 
 * `.devcontainer/Dockerfile` builds the container image and installs pinned base
   tooling plus several developer CLIs
-* `.devcontainer/post-create.sh` only ensures persistent directory ownership,
-  writes pnpm user config, and sanitizes Git config
+* `.devcontainer/post-create.sh` ensures persistent directory ownership, writes
+  pnpm user config, sanitizes Git config, and projects Context Mode
+  configuration for Codex, OpenCode, and GitHub Copilot CLI into the user home
+* workspace-owned VS Code Copilot wiring lives in `.vscode/mcp.json` and
+  `.github/hooks/context-mode.json`
 * `.devcontainer/post-start.sh` only reruns Git config sanitization
 
 The archived host setup script is retained for reference only. It is not part

@@ -5,18 +5,38 @@
 set -euo pipefail
 
 readonly DEVCONTAINER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly CONFIG_HELPERS_PATH="$DEVCONTAINER_DIR/config-helpers.cjs"
 readonly PNPM_BIN_DIR="/usr/local/share/pnpm/bin"
 readonly PNPM_GLOBAL_DIR="/usr/local/share/pnpm-global"
 readonly PNPM_CONFIG_DIR="/home/vscode/.config/pnpm"
 readonly PNPM_CONFIG_FILE="$PNPM_CONFIG_DIR/config.yaml"
+readonly CODEX_CONFIG_PATH="/home/vscode/.codex/config.toml"
+readonly CODEX_HOOKS_PATH="/home/vscode/.codex/hooks.json"
+readonly COPILOT_HOME_DIR="${COPILOT_HOME:-/home/vscode/.copilot}"
+readonly COPILOT_HOOKS_PATH="$COPILOT_HOME_DIR/hooks/context-mode.json"
 readonly PERSISTENT_HOME_DIRS=(
   "/home/vscode/.codex"
+  "/home/vscode/.copilot"
   "/home/vscode/.config/opencode"
   "/home/vscode/.local/share/opencode"
   "/home/vscode/.local/state/opencode"
   "/home/vscode/.opensrc"
   "/home/vscode/.agents/skills"
 )
+
+opencode_config_path() {
+  if [[ -f "/home/vscode/.config/opencode/opencode.json" ]]; then
+    printf '%s\n' "/home/vscode/.config/opencode/opencode.json"
+    return
+  fi
+
+  if [[ -f "/home/vscode/.config/opencode/opencode.jsonc" ]]; then
+    printf '%s\n' "/home/vscode/.config/opencode/opencode.jsonc"
+    return
+  fi
+
+  printf '%s\n' "/home/vscode/.config/opencode/opencode.json"
+}
 
 ensure_persistent_home_ownership() {
   local directory
@@ -33,9 +53,267 @@ ensure_pnpm_user_config() {
   sudo chown -R vscode:vscode "$PNPM_CONFIG_DIR"
 }
 
+ensure_codex_context_mode_config() {
+  local temp_file
+
+  mkdir -p "$(dirname "$CODEX_CONFIG_PATH")"
+
+  if [[ ! -f "$CODEX_CONFIG_PATH" ]]; then
+    cat >"$CODEX_CONFIG_PATH" <<'EOF'
+[features]
+hooks = true
+plugin_hooks = true
+
+[mcp_servers.context-mode]
+command = "context-mode"
+
+[mcp_servers.context-mode.env]
+CONTEXT_MODE_PLATFORM = "codex"
+EOF
+    return
+  fi
+
+  temp_file="$(mktemp)"
+
+  awk '
+    BEGIN {
+      in_features = 0
+      saw_features = 0
+      saw_hooks = 0
+      saw_plugin_hooks = 0
+    }
+
+    /^\[features\]$/ {
+      saw_features = 1
+      in_features = 1
+      print
+      next
+    }
+
+    /^\[/ {
+      if (in_features == 1) {
+        if (saw_hooks == 0) {
+          print "hooks = true"
+        }
+        if (saw_plugin_hooks == 0) {
+          print "plugin_hooks = true"
+        }
+        in_features = 0
+      }
+
+      print
+      next
+    }
+
+    {
+      if (in_features == 1) {
+        if ($0 ~ /^hooks = /) {
+          saw_hooks = 1
+        }
+        if ($0 ~ /^plugin_hooks = /) {
+          saw_plugin_hooks = 1
+        }
+      }
+
+      print
+    }
+
+    END {
+      if (in_features == 1) {
+        if (saw_hooks == 0) {
+          print "hooks = true"
+        }
+        if (saw_plugin_hooks == 0) {
+          print "plugin_hooks = true"
+        }
+      }
+
+      if (saw_features == 0) {
+        print ""
+        print "[features]"
+        print "hooks = true"
+        print "plugin_hooks = true"
+      }
+    }
+  ' "$CODEX_CONFIG_PATH" >"$temp_file"
+
+  mv "$temp_file" "$CODEX_CONFIG_PATH"
+
+  if ! grep -Fq '[mcp_servers.context-mode]' "$CODEX_CONFIG_PATH"; then
+    cat >>"$CODEX_CONFIG_PATH" <<'EOF'
+
+[mcp_servers.context-mode]
+command = "context-mode"
+
+[mcp_servers.context-mode.env]
+CONTEXT_MODE_PLATFORM = "codex"
+EOF
+  fi
+}
+
+ensure_codex_context_mode_hooks() {
+  mkdir -p "$(dirname "$CODEX_HOOKS_PATH")"
+
+  DEVCONTAINER_CONFIG_HELPERS="$CONFIG_HELPERS_PATH" node - "$CODEX_HOOKS_PATH" <<'NODE'
+const { ensureHookCommand, ensureObject, loadJsonFile, saveJsonFile } = require(process.env.DEVCONTAINER_CONFIG_HELPERS);
+
+const filePath = process.argv[2];
+const config = loadJsonFile(filePath, { hooks: {} });
+ensureObject(config, 'hooks');
+
+ensureHookCommand(
+  config,
+  'PreToolUse',
+  {
+    matcher: 'local_shell|shell|shell_command|exec_command|Bash|Shell|apply_patch|Edit|Write|grep_files|ctx_execute|ctx_execute_file|ctx_batch_execute|ctx_fetch_and_index|ctx_search|ctx_index|mcp__',
+    hooks: [{ type: 'command', command: 'context-mode hook codex pretooluse' }],
+  },
+  'context-mode hook codex pretooluse'
+);
+ensureHookCommand(
+  config,
+  'PostToolUse',
+  {
+    matcher: '',
+    hooks: [{ type: 'command', command: 'context-mode hook codex posttooluse' }],
+  },
+  'context-mode hook codex posttooluse'
+);
+ensureHookCommand(
+  config,
+  'SessionStart',
+  {
+    matcher: '',
+    hooks: [{ type: 'command', command: 'context-mode hook codex sessionstart' }],
+  },
+  'context-mode hook codex sessionstart'
+);
+ensureHookCommand(
+  config,
+  'PreCompact',
+  {
+    matcher: '',
+    hooks: [{ type: 'command', command: 'context-mode hook codex precompact' }],
+  },
+  'context-mode hook codex precompact'
+);
+ensureHookCommand(
+  config,
+  'UserPromptSubmit',
+  {
+    hooks: [{ type: 'command', command: 'context-mode hook codex userpromptsubmit' }],
+  },
+  'context-mode hook codex userpromptsubmit'
+);
+ensureHookCommand(
+  config,
+  'Stop',
+  {
+    hooks: [{ type: 'command', command: 'context-mode hook codex stop' }],
+  },
+  'context-mode hook codex stop'
+);
+
+saveJsonFile(filePath, config);
+NODE
+}
+
+ensure_opencode_context_mode_plugin() {
+  local config_path
+
+  config_path="$(opencode_config_path)"
+  mkdir -p "$(dirname "$config_path")"
+
+  DEVCONTAINER_CONFIG_HELPERS="$CONFIG_HELPERS_PATH" node - "$config_path" <<'NODE'
+const { addUniqueValue, ensureArray, loadJsonFile, saveJsonFile } = require(process.env.DEVCONTAINER_CONFIG_HELPERS);
+
+const filePath = process.argv[2];
+const config = loadJsonFile(filePath, {}, { allowComments: true });
+
+if (!config.$schema) {
+  config.$schema = 'https://opencode.ai/config.json';
+}
+
+const plugins = ensureArray(config, 'plugin');
+addUniqueValue(plugins, 'context-mode');
+
+if (config.mcp && Object.prototype.hasOwnProperty.call(config.mcp, 'context-mode')) {
+  delete config.mcp['context-mode'];
+  if (Object.keys(config.mcp).length === 0) {
+    delete config.mcp;
+  }
+}
+
+saveJsonFile(filePath, config);
+NODE
+}
+
+ensure_copilot_context_mode_mcp() {
+  if ! command -v copilot >/dev/null 2>&1; then
+    return
+  fi
+
+  if ! copilot mcp list 2>/dev/null | grep -Fq 'context-mode'; then
+    copilot mcp add context-mode -- context-mode >/dev/null
+  fi
+}
+
+ensure_copilot_context_mode_hooks() {
+  mkdir -p "$(dirname "$COPILOT_HOOKS_PATH")"
+
+  cat >"$COPILOT_HOOKS_PATH" <<'EOF'
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "command": "context-mode hook copilot-cli pretooluse"
+      }
+    ],
+    "postToolUse": [
+      {
+        "type": "command",
+        "command": "context-mode hook copilot-cli posttooluse"
+      }
+    ],
+    "preCompact": [
+      {
+        "type": "command",
+        "command": "context-mode hook copilot-cli precompact"
+      }
+    ],
+    "sessionStart": [
+      {
+        "type": "command",
+        "command": "context-mode hook copilot-cli sessionstart"
+      }
+    ],
+    "userPromptSubmitted": [
+      {
+        "type": "command",
+        "command": "context-mode hook copilot-cli userpromptsubmit"
+      }
+    ],
+    "agentStop": [
+      {
+        "type": "command",
+        "command": "context-mode hook copilot-cli stop"
+      }
+    ]
+  }
+}
+EOF
+}
+
 main() {
   ensure_persistent_home_ownership
   ensure_pnpm_user_config
+  ensure_codex_context_mode_config
+  ensure_codex_context_mode_hooks
+  ensure_opencode_context_mode_plugin
+  ensure_copilot_context_mode_mcp
+  ensure_copilot_context_mode_hooks
   bash "$DEVCONTAINER_DIR/sanitize-git-config.sh"
 }
 

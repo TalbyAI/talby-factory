@@ -9,6 +9,7 @@
 	},
 	"mounts": [
 		"source=talby-codex-home,target=/home/vscode/.codex,type=volume",
+		"source=talby-copilot-home,target=/home/vscode/.copilot,type=volume",
 		"source=talby-opencode-config-home,target=/home/vscode/.config/opencode,type=volume",
 		"source=talby-opencode-share-home,target=/home/vscode/.local/share/opencode,type=volume",
 		"source=talby-opencode-state-home,target=/home/vscode/.local/state/opencode,type=volume",

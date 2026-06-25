@@ -10,6 +10,7 @@ ARG PNPM_VERSION=11.9.0
 ARG NODE_VERSION=24.18.0
 ARG OPENCODE_VERSION=1.17.10
 ARG CODEX_VERSION=0.142.2
+ARG COPILOT_VERSION=1.0.63
 ARG CONTEXT_MODE_VERSION=1.0.166
 ARG GITNEXUS_VERSION=1.6.8
 ARG GH_VERSION=2.95.0
@@ -58,7 +59,7 @@ RUN mkdir -p /tmp/gh-cli \
     && rm -rf /tmp/gh-cli /tmp/node.tar.xz
 
 # Install global npm and pnpm developer CLIs.
-RUN npm install --global "pnpm@${PNPM_VERSION}" "opencode-ai@${OPENCODE_VERSION}" \
+RUN npm install --global "pnpm@${PNPM_VERSION}" "opencode-ai@${OPENCODE_VERSION}" "@github/copilot@${COPILOT_VERSION}" \
     && pnpm config set global-bin-dir "$PNPM_BIN_DIR" \
     && pnpm config set global-dir "$PNPM_GLOBAL_DIR" \
     && pnpm add --global \
@@ -76,7 +77,7 @@ RUN npm install --global "pnpm@${PNPM_VERSION}" "opencode-ai@${OPENCODE_VERSION}
 # Install dotnet tools and prepare the vscode user's global tool configuration.
 RUN dotnet tool install --tool-path "$DOTNET_TOOLS_DIR" aspire.cli --version "$ASPIRE_VERSION" \
     && dotnet tool install --tool-path "$DOTNET_TOOLS_DIR" csharpier --version "$CSHARPIER_VERSION" \
-    && mkdir -p /home/vscode/.config/pnpm /home/vscode/.codex /home/vscode/.opensrc /home/vscode/.agents/skills \
+    && mkdir -p /home/vscode/.config/pnpm /home/vscode/.codex /home/vscode/.copilot /home/vscode/.opensrc /home/vscode/.agents/skills \
     && printf 'globalBinDir: %s\nglobalDir: %s\n' "$PNPM_BIN_DIR" "$PNPM_GLOBAL_DIR" > /home/vscode/.config/pnpm/config.yaml \
-    && chown -R vscode:vscode "$PNPM_HOME" "$PNPM_GLOBAL_DIR" "$DOTNET_TOOLS_DIR" /home/vscode/.codex /home/vscode/.opensrc /home/vscode/.agents \
+    && chown -R vscode:vscode "$PNPM_HOME" "$PNPM_GLOBAL_DIR" "$DOTNET_TOOLS_DIR" /home/vscode/.codex /home/vscode/.copilot /home/vscode/.opensrc /home/vscode/.agents \
     && chown -R vscode:vscode /home/vscode/.config/pnpm

@@ -590,3 +590,6 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Context-Mode cache files for Visual Studio
+.github/context-mode/
