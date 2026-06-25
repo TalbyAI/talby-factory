@@ -76,6 +76,21 @@ Until that rebuild happens, these behaviors are expected:
 This is a Layer 1 validation blocker, not a reason to reintroduce lifecycle
 bootstrap logic.
 
+## Git config portability note
+
+When the container inherits a global Git config created on Windows, Git can emit
+repeated warnings for `safe.directory` entries such as `C:/...` or `E:/...`
+because those paths are not absolute in Linux.
+
+The active Dev Container lifecycle handles that case through
+`.devcontainer/sanitize-git-config.sh`, which runs from both
+`.devcontainer/post-create.sh` and `.devcontainer/post-start.sh`.
+
+The sanitizer removes Windows-only `safe.directory` entries from
+`/home/vscode/.gitconfig` while leaving valid Linux entries intact. This keeps
+`git status` and other Git commands quiet inside the supported container
+baseline without reintroducing the legacy host Git projection model.
+
 ## Deferred Work
 
 The following concerns are intentionally deferred beyond Layer 1:

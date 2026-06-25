@@ -16,13 +16,13 @@ main() {
   temp_file="$(mktemp)"
 
   awk '
-    /^\[safe\]$/ {
+    /^\[safe\]\r?$/ {
       in_safe = 1
       safe_block = $0 ORS
       next
     }
 
-    /^\[/ {
+    /^\[.*\]\r?$/ {
       if (in_safe) {
         printf "%s", safe_block
         safe_block = ""
