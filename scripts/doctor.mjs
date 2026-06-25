@@ -184,6 +184,8 @@ function exitCodeForFindings() {
 
 async function main() {
   await validateSupportedBaseline();
+  validateTool('az', ['version'], 'Azure CLI');
+  validateTool('aspire', ['--version'], 'Aspire CLI');
   validateTool('node', ['--version'], 'Node.js runtime');
   validateTool('pnpm', ['--version'], 'pnpm runtime');
   validateTool('docker', ['--version'], 'Docker CLI');

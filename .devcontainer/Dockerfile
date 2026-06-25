@@ -14,6 +14,7 @@ ARG CONTEXT_MODE_VERSION=1.0.166
 ARG GITNEXUS_VERSION=1.6.8
 ARG GH_VERSION=2.95.0
 ARG MARKDOWNLINT_CLI2_VERSION=0.22.1
+ARG ASPIRE_VERSION=13.4.5
 ARG CSHARPIER_VERSION=1.3.0
 ARG BIOME_VERSION=2.5.1
 ARG OPENSRC_VERSION=0.7.3
@@ -21,13 +22,21 @@ ARG SKILLS_VERSION=1.5.13
 
 RUN apt-get update \
     && export DEBIAN_FRONTEND=noninteractive \
-        && apt-get install -y --no-install-recommends ca-certificates curl just ripgrep xz-utils \
+        && apt-get install -y --no-install-recommends apt-transport-https ca-certificates curl gnupg just lsb-release ripgrep xz-utils \
         && mkdir -p "$PNPM_HOME" "$PNPM_BIN_DIR" "$PNPM_GLOBAL_DIR" "$DOTNET_TOOLS_DIR" /tmp/gh-cli \
         && case "$(dpkg --print-architecture)" in \
             amd64) node_arch='x64' ;; \
             arm64) node_arch='arm64' ;; \
             *) echo "Unsupported architecture: $(dpkg --print-architecture)" >&2; exit 1 ;; \
         esac \
+        && mkdir -p /etc/apt/keyrings \
+        && curl --fail --silent --show-error --location https://packages.microsoft.com/keys/microsoft.asc \
+            | gpg --dearmor -o /etc/apt/keyrings/microsoft.gpg \
+        && chmod go+r /etc/apt/keyrings/microsoft.gpg \
+        && printf 'Types: deb\nURIs: https://packages.microsoft.com/repos/azure-cli/\nSuites: %s\nComponents: main\nArchitectures: %s\nSigned-by: /etc/apt/keyrings/microsoft.gpg\n' \
+            "$(lsb_release -cs)" "$(dpkg --print-architecture)" > /etc/apt/sources.list.d/azure-cli.sources \
+        && apt-get update \
+        && apt-get install -y --no-install-recommends azure-cli \
         && curl --fail --silent --show-error --location \
             "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${node_arch}.tar.xz" \
             -o /tmp/node.tar.xz \
@@ -51,6 +60,7 @@ RUN apt-get update \
             "@biomejs/biome@${BIOME_VERSION}" \
             "opensrc@${OPENSRC_VERSION}" \
             "skills@${SKILLS_VERSION}" \
+        && dotnet tool install --tool-path "$DOTNET_TOOLS_DIR" aspire.cli --version "$ASPIRE_VERSION" \
         && dotnet tool install --tool-path "$DOTNET_TOOLS_DIR" csharpier --version "$CSHARPIER_VERSION" \
         && mkdir -p /home/vscode/.config/pnpm /home/vscode/.codex /home/vscode/.opensrc /home/vscode/.agents/skills \
         && printf 'globalBinDir: %s\nglobalDir: %s\n' "$PNPM_BIN_DIR" "$PNPM_GLOBAL_DIR" > /home/vscode/.config/pnpm/config.yaml \
