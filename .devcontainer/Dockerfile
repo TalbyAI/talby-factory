@@ -6,18 +6,18 @@ ENV PNPM_GLOBAL_DIR=/usr/local/share/pnpm-global
 ENV DOTNET_TOOLS_DIR=/usr/local/share/dotnet-tools
 ENV PATH=${PNPM_HOME}:${PNPM_BIN_DIR}:${DOTNET_TOOLS_DIR}:${PATH}
 
-ARG PNPM_VERSION=11.7.0
-ARG NODE_VERSION=24.16.0
-ARG OPENCODE_VERSION=1.17.7
-ARG CODEX_VERSION=0.140.0
-ARG CONTEXT_MODE_VERSION=1.0.162
-ARG GITNEXUS_VERSION=1.6.7
+ARG PNPM_VERSION=11.9.0
+ARG NODE_VERSION=24.18.0
+ARG OPENCODE_VERSION=1.17.10
+ARG CODEX_VERSION=0.142.2
+ARG CONTEXT_MODE_VERSION=1.0.166
+ARG GITNEXUS_VERSION=1.6.8
 ARG GH_VERSION=2.95.0
 ARG MARKDOWNLINT_CLI2_VERSION=0.22.1
 ARG CSHARPIER_VERSION=1.3.0
-ARG BIOME_VERSION=2.5.0
-ARG OPENSRC_VERSION=0.7.2
-ARG SKILLS_VERSION=1.5.11
+ARG BIOME_VERSION=2.5.1
+ARG OPENSRC_VERSION=0.7.3
+ARG SKILLS_VERSION=1.5.13
 
 RUN apt-get update \
     && export DEBIAN_FRONTEND=noninteractive \
@@ -37,15 +37,13 @@ RUN apt-get update \
             -o /tmp/gh-cli/gh.tar.gz \
         && tar -xzf /tmp/gh-cli/gh.tar.gz -C /tmp/gh-cli --strip-components=1 \
         && install -m 0755 /tmp/gh-cli/bin/gh /usr/local/bin/gh \
-        && npm install --global "pnpm@${PNPM_VERSION}" \
+        && npm install --global "pnpm@${PNPM_VERSION}" "opencode-ai@${OPENCODE_VERSION}" \
         && pnpm config set global-bin-dir "$PNPM_BIN_DIR" \
         && pnpm config set global-dir "$PNPM_GLOBAL_DIR" \
         && pnpm add --global \
-            --allow-build=opencode-ai \
             --allow-build=gitnexus \
             --allow-build=@ladybugdb/core \
             --allow-build=tree-sitter \
-            "opencode-ai@${OPENCODE_VERSION}" \
             "@openai/codex@${CODEX_VERSION}" \
             "context-mode@${CONTEXT_MODE_VERSION}" \
             "gitnexus@${GITNEXUS_VERSION}" \

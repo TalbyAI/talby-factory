@@ -2,7 +2,7 @@
   "name": "talby-factory-layer1",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.7.0",
+  "packageManager": "pnpm@11.9.0",
   "scripts": {
     "doctor": "node scripts/doctor.mjs"
   }
