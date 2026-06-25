@@ -21,7 +21,7 @@ ARG SKILLS_VERSION=1.5.13
 
 RUN apt-get update \
     && export DEBIAN_FRONTEND=noninteractive \
-        && apt-get install -y --no-install-recommends ca-certificates curl just xz-utils \
+        && apt-get install -y --no-install-recommends ca-certificates curl just ripgrep xz-utils \
         && mkdir -p "$PNPM_HOME" "$PNPM_BIN_DIR" "$PNPM_GLOBAL_DIR" "$DOTNET_TOOLS_DIR" /tmp/gh-cli \
         && case "$(dpkg --print-architecture)" in \
             amd64) node_arch='x64' ;; \
