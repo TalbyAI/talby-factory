@@ -98,10 +98,12 @@ The current active lifecycle is intentionally narrow:
 * `.devcontainer/Dockerfile` builds the container image and installs pinned base
   tooling plus several developer CLIs
 * `.devcontainer/post-create.sh` ensures persistent directory ownership, writes
-  pnpm user config, sanitizes Git config, and projects Context Mode
-  configuration for Codex, OpenCode, and GitHub Copilot CLI into the user home
+  pnpm user config, sanitizes Git config, and projects Context Mode plus
+  GitNexus configuration for Codex, OpenCode, and GitHub Copilot CLI into the
+  user home
 * workspace-owned VS Code Copilot wiring lives in `.vscode/mcp.json` and
-  `.github/hooks/context-mode.json`
+  `.github/hooks/context-mode.json`, with `.vscode/mcp.json` declaring both
+  `context-mode` and `gitnexus`
 * `.devcontainer/post-start.sh` only reruns Git config sanitization
 
 The archived host setup script is retained for reference only. It is not part

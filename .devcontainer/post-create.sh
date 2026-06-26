@@ -38,6 +38,10 @@ opencode_config_path() {
   printf '%s\n' "/home/vscode/.config/opencode/opencode.json"
 }
 
+gitnexus_bin_path() {
+  command -v gitnexus 2>/dev/null || true
+}
+
 ensure_persistent_home_ownership() {
   local directory
 
@@ -218,17 +222,49 @@ saveJsonFile(filePath, config);
 NODE
 }
 
+ensure_codex_gitnexus_config() {
+  local gitnexus_bin
+
+  mkdir -p "$(dirname "$CODEX_CONFIG_PATH")"
+
+  if [[ -f "$CODEX_CONFIG_PATH" ]] && grep -Fq '[mcp_servers.gitnexus]' "$CODEX_CONFIG_PATH"; then
+    return
+  fi
+
+  gitnexus_bin="$(gitnexus_bin_path)"
+
+  if [[ -n "$gitnexus_bin" ]]; then
+    cat >>"$CODEX_CONFIG_PATH" <<EOF
+
+[mcp_servers.gitnexus]
+command = "$gitnexus_bin"
+args = ["mcp"]
+EOF
+    return
+  fi
+
+  cat >>"$CODEX_CONFIG_PATH" <<'EOF'
+
+[mcp_servers.gitnexus]
+command = "npx"
+args = ["-y", "gitnexus@latest", "mcp"]
+EOF
+}
+
 ensure_opencode_context_mode_plugin() {
   local config_path
+  local gitnexus_bin
 
   config_path="$(opencode_config_path)"
+  gitnexus_bin="$(gitnexus_bin_path)"
   mkdir -p "$(dirname "$config_path")"
 
-  DEVCONTAINER_CONFIG_HELPERS="$CONFIG_HELPERS_PATH" node - "$config_path" <<'NODE'
-const { addUniqueValue, ensureArray, loadJsonFile, saveJsonFile } = require(process.env.DEVCONTAINER_CONFIG_HELPERS);
+  DEVCONTAINER_CONFIG_HELPERS="$CONFIG_HELPERS_PATH" DEVCONTAINER_GITNEXUS_BIN="$gitnexus_bin" node - "$config_path" <<'NODE'
+const { addUniqueValue, ensureArray, ensureObject, loadJsonFile, saveJsonFile } = require(process.env.DEVCONTAINER_CONFIG_HELPERS);
 
 const filePath = process.argv[2];
 const config = loadJsonFile(filePath, {}, { allowComments: true });
+const gitnexusBin = process.env.DEVCONTAINER_GITNEXUS_BIN;
 
 if (!config.$schema) {
   config.$schema = 'https://opencode.ai/config.json';
@@ -244,6 +280,11 @@ if (config.mcp && Object.prototype.hasOwnProperty.call(config.mcp, 'context-mode
   }
 }
 
+const mcp = ensureObject(config, 'mcp');
+mcp.gitnexus = gitnexusBin
+  ? { type: 'local', command: [gitnexusBin, 'mcp'] }
+  : { type: 'local', command: ['npx', '-y', 'gitnexus@latest', 'mcp'] };
+
 saveJsonFile(filePath, config);
 NODE
 }
@@ -256,6 +297,27 @@ ensure_copilot_context_mode_mcp() {
   if ! copilot mcp list 2>/dev/null | grep -Fq 'context-mode'; then
     copilot mcp add context-mode -- context-mode >/dev/null
   fi
+}
+
+ensure_copilot_gitnexus_mcp() {
+  local gitnexus_bin
+
+  if ! command -v copilot >/dev/null 2>&1; then
+    return
+  fi
+
+  if copilot mcp list 2>/dev/null | grep -Fq 'gitnexus'; then
+    return
+  fi
+
+  gitnexus_bin="$(gitnexus_bin_path)"
+
+  if [[ -n "$gitnexus_bin" ]]; then
+    copilot mcp add gitnexus -- "$gitnexus_bin" mcp >/dev/null
+    return
+  fi
+
+  copilot mcp add gitnexus -- npx -y gitnexus@latest mcp >/dev/null
 }
 
 ensure_copilot_context_mode_hooks() {
@@ -311,8 +373,10 @@ main() {
   ensure_pnpm_user_config
   ensure_codex_context_mode_config
   ensure_codex_context_mode_hooks
+  ensure_codex_gitnexus_config
   ensure_opencode_context_mode_plugin
   ensure_copilot_context_mode_mcp
+  ensure_copilot_gitnexus_mcp
   ensure_copilot_context_mode_hooks
   bash "$DEVCONTAINER_DIR/sanitize-git-config.sh"
 }
