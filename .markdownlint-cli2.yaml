@@ -1,0 +1,14 @@
+globs:
+  - "docs/**/*.md"
+  - ".devcontainer/**/*.md"
+ignores:
+  - ".copilot-tracking/**"
+  - "node_modules/**"
+  - ".pnpm-store/**"
+gitignore: true
+noProgress: true
+config:
+  MD013: false
+  MD033: false
+  MD041: false
+  MD060: false

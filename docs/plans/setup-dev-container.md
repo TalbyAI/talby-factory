@@ -42,6 +42,8 @@ Layer 1 exposes a deliberately narrow public surface:
 
 ```bash
 pnpm doctor
+just check-md
+just fix-md
 just doctor
 just --list
 ```
@@ -57,12 +59,15 @@ Use these checks for the current Layer 1 baseline:
 node -e "JSON.parse(require('fs').readFileSync('.devcontainer/devcontainer.json','utf8'))"
 node --version
 pnpm --version
+just check-md
 pnpm doctor
 just --list
 ```
 
 Expected behavior:
 
+* `just check-md` lints the supported `docs/` and `.devcontainer/` Markdown
+  surface with the root `.markdownlint-cli2.yaml` configuration
 * `pnpm doctor` reports only Layer 1 findings
 * missing `just` in an already-running container is a rebuild signal, not a
   runtime integration failure
@@ -107,6 +112,10 @@ The following concerns are intentionally deferred beyond Layer 1:
 * `HOME` projection and user-scoped config writes
 * authentication-dependent setup
 * broader setup or repair workflows
+
+The Markdown lint configuration is repo-owned, currently scoped to `docs/` and
+`.devcontainer/`, and assumes the Dev Container image provides
+`markdownlint-cli2`.
 
 For the retired mixed-responsibility bootstrap model and its replacement
 mapping, see `.devcontainer/archive/legacy-bootstrap.md`.

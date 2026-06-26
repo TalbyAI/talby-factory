@@ -27,6 +27,9 @@ Layer 1 covers:
 * the root `package.json`
 * the root `Justfile`
 * the bounded `pnpm doctor` diagnostic
+* the root `.markdownlint-cli2.yaml` configuration for `docs/` and
+  `.devcontainer/`
+* the `just check-md` and `just fix-md` recipes
 
 For the active support contract, see `docs/plans/setup-dev-container.md`.
 
@@ -54,11 +57,14 @@ yet as part of the supported baseline.
 * `opencode`
 * `context-mode`
 * `gitnexus`
-* `markdownlint-cli2`
 * `biome`
 * `opensrc`
 * `skills`
 * `csharpier`
+
+### Developer CLIs now wired by the repo
+
+* `markdownlint-cli2`
 
 ## Not Yet Configured For The Current Setup
 
@@ -101,6 +107,9 @@ The current active lifecycle is intentionally narrow:
   pnpm user config, sanitizes Git config, and projects Context Mode plus
   GitNexus configuration for Codex, OpenCode, and GitHub Copilot CLI into the
   user home
+* the repo root `.markdownlint-cli2.yaml` config plus `just check-md` and
+  `just fix-md` provide a repo-owned Markdown lint surface for `docs/` and
+  `.devcontainer/`, backed by the image installation of `markdownlint-cli2`
 * workspace-owned VS Code Copilot wiring lives in `.vscode/mcp.json` and
   `.github/hooks/context-mode.json`, with `.vscode/mcp.json` declaring both
   `context-mode` and `gitnexus`
