@@ -56,10 +56,13 @@ yet as part of the supported baseline.
 * `codex`
 * `opencode`
 * `context-mode`
+* `engram`
+* `gentle-ai`
 * `gitnexus`
 * `biome`
 * `opensrc`
 * `skills`
+* `gga`
 * `csharpier`
 
 ### Developer CLIs now wired by the repo
@@ -78,10 +81,6 @@ dev container lifecycle.
 * OpenCode skill synchronization from the shared global skills path
 
 ### Tooling still missing from the rebuilt lifecycle
-
-* `engram` CLI
-* `gentle-ai` CLI
-* `gga` CLI
 
 ### Pending plugin and host setup work
 

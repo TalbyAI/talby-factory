@@ -189,6 +189,9 @@ async function main() {
   validateTool('node', ['--version'], 'Node.js runtime');
   validateTool('pnpm', ['--version'], 'pnpm runtime');
   validateTool('docker', ['--version'], 'Docker CLI');
+  validateTool('gentle-ai', ['version'], 'Gentle AI CLI');
+  validateTool('engram', ['version'], 'Engram CLI');
+  validateTool('gga', ['version'], 'GGA CLI');
   validateTool('just', ['--version'], 'just command surface runtime', 'WARN');
   await validatePackageManifest();
   await validateLayer1Files();

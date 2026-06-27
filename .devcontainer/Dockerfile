@@ -14,6 +14,9 @@ ARG COPILOT_VERSION=1.0.63
 ARG CONTEXT_MODE_VERSION=1.0.166
 ARG GITNEXUS_VERSION=1.6.8
 ARG GH_VERSION=2.95.0
+ARG GENTLE_AI_VERSION=1.42.0
+ARG ENGRAM_VERSION=1.17.0
+ARG GGA_VERSION=2.8.1
 ARG MARKDOWNLINT_CLI2_VERSION=0.22.1
 ARG ASPIRE_VERSION=13.4.5
 ARG CSHARPIER_VERSION=1.3.0
@@ -57,6 +60,31 @@ RUN mkdir -p /tmp/gh-cli \
     && tar -xzf /tmp/gh-cli/gh.tar.gz -C /tmp/gh-cli --strip-components=1 \
     && install -m 0755 /tmp/gh-cli/bin/gh /usr/local/bin/gh \
     && rm -rf /tmp/gh-cli /tmp/node.tar.xz
+
+# Install pinned Gentle AI ecosystem CLIs.
+RUN mkdir -p /tmp/gentle-ai /tmp/engram /tmp/gga /usr/local/lib/gga/bin /usr/local/lib/gga/lib \
+    && curl --fail --silent --show-error --location \
+        "https://github.com/Gentleman-Programming/gentle-ai/releases/download/v${GENTLE_AI_VERSION}/gentle-ai_${GENTLE_AI_VERSION}_linux_$(dpkg --print-architecture).tar.gz" \
+        -o /tmp/gentle-ai/gentle-ai.tar.gz \
+    && tar -xzf /tmp/gentle-ai/gentle-ai.tar.gz -C /tmp/gentle-ai \
+    && install -m 0755 /tmp/gentle-ai/gentle-ai /usr/local/bin/gentle-ai \
+    && curl --fail --silent --show-error --location \
+        "https://github.com/Gentleman-Programming/engram/releases/download/v${ENGRAM_VERSION}/engram_${ENGRAM_VERSION}_linux_$(dpkg --print-architecture).tar.gz" \
+        -o /tmp/engram/engram.tar.gz \
+    && tar -xzf /tmp/engram/engram.tar.gz -C /tmp/engram \
+    && install -m 0755 /tmp/engram/engram /usr/local/bin/engram \
+    && curl --fail --silent --show-error --location \
+        "https://github.com/Gentleman-Programming/gentleman-guardian-angel/archive/refs/tags/v${GGA_VERSION}.tar.gz" \
+        -o /tmp/gga/gga.tar.gz \
+    && tar -xzf /tmp/gga/gga.tar.gz -C /tmp/gga \
+    && install -m 0755 /tmp/gga/gentleman-guardian-angel-${GGA_VERSION}/bin/gga /usr/local/lib/gga/bin/gga \
+    && install -m 0755 /tmp/gga/gentleman-guardian-angel-${GGA_VERSION}/lib/providers.sh /usr/local/lib/gga/lib/providers.sh \
+    && install -m 0755 /tmp/gga/gentleman-guardian-angel-${GGA_VERSION}/lib/cache.sh /usr/local/lib/gga/lib/cache.sh \
+    && install -m 0755 /tmp/gga/gentleman-guardian-angel-${GGA_VERSION}/lib/pr_mode.sh /usr/local/lib/gga/lib/pr_mode.sh \
+    && sed -i 's|^VERSION="${GGA_VERSION:-dev}"$|VERSION="'"${GGA_VERSION}"'"|' /usr/local/lib/gga/bin/gga \
+    && sed -i 's|^LIB_DIR=.*$|LIB_DIR="/usr/local/lib/gga/lib"|' /usr/local/lib/gga/bin/gga \
+    && install -m 0755 /usr/local/lib/gga/bin/gga /usr/local/bin/gga \
+    && rm -rf /tmp/gentle-ai /tmp/engram /tmp/gga
 
 # Install global npm and pnpm developer CLIs.
 RUN npm install --global "pnpm@${PNPM_VERSION}" "opencode-ai@${OPENCODE_VERSION}" "@github/copilot@${COPILOT_VERSION}" \
